@@ -135,6 +135,37 @@ const int buffer_size = 8;
 
 
 
+struct Vertex
+{
+  vec3 pos;
+  vec3 normal;
+  vec2 uv;
+  vec4 color;
+  vec4 _pad0; 
+  vec4 _pad1;
+};
+
+Vertex unpack(uint index)
+{
+	// Unpack the vertices from the SSBO using the glTF vertex structure
+	// The multiplier is the size of the vertex divided by four float components (=16 bytes)
+	const int m = ubo.vertexSize / 16;
+
+	vec4 d0 = vertices.v[m * index + 0];
+	vec4 d1 = vertices.v[m * index + 1];
+	vec4 d2 = vertices.v[m * index + 2];
+
+	Vertex v;
+	v.pos = d0.xyz;
+	v.normal = vec3(d0.w, d1.x, d1.y);
+	v.uv = vec2(d1.z, d1.w);
+	v.color = vec4(d2.x, d2.y, d2.z, 1.0);
+
+	return v;
+}
+
+
+
 
 
 vec3 rgb2hsv(vec3 c)
@@ -218,10 +249,33 @@ bool is_clear_line_of_sight(const vec3 pos, const vec3 light_pos)
 
 
 
-int get_rand_light_triangle(void)
+// index is 0 to ubo.light_tri_count - 1.0
+void get_rand_light_triangle(inout Vertex A, inout Vertex B, inout Vertex C, inout vec3 normal, inout float area )
 {
-	return int(stepAndOutputRNGFloat(prng_state)*(ubo.light_tri_count - 1.0));
+	uint index = int(stepAndOutputRNGFloat(prng_state)*(ubo.light_tri_count - 1.0));
+
+	uint first_index = 3*ubo.tri_count - 3*ubo.light_tri_count + 3*index;
+
+	uint index_0 = indices.i[first_index + 0];
+	uint index_1 = indices.i[first_index + 1];
+	uint index_2 = indices.i[first_index + 2];
+
+	A = unpack(index_0);
+	B = unpack(index_1);
+	C = unpack(index_2);
+	
+	vec3 ba = B.pos - A.pos;
+	vec3 ca = C.pos - A.pos;
+	vec3 tri_cross = cross(ba, ca);
+
+	area = 0.5*length(tri_cross);
+	normal = normalize(tri_cross);
 }
+
+
+
+
+
 
 // https://stackoverflow.com/questions/19654251/random-point-inside-triangle-inside-java
 vec3 getRandomPointOnTriangle(vec3 A, vec3 B, vec3 C)
@@ -246,9 +300,6 @@ vec3 getRandomPointOnTriangle(vec3 A, vec3 B, vec3 C)
 
 float trace_path_forward(const int steps, const vec3 origin, const vec3 direction, const float hue, const float eta)
 {
-	int rand_light_index = get_rand_light_triangle();
-
-	
 
 	//vec3 rand_point = getRandomPointOnTriangle();
 
@@ -256,7 +307,7 @@ float trace_path_forward(const int steps, const vec3 origin, const vec3 directio
 	vec3 o = origin; // get random point on random triangle
 	vec3 d = direction; // get random hemispherical direction
 
-	const float energy = 1.0;
+	const float energy = 1.0; // use energy proportional to triangle area
 	const float caustic_energy = energy*1.0;
 
 	float ret_colour = 0;
@@ -898,37 +949,6 @@ float get_ray0(const float hue, const float eta)
 
 
  
-struct Vertex
-{
-  vec3 pos;
-  vec3 normal;
-  vec2 uv;
-  vec4 color;
-  vec4 _pad0; 
-  vec4 _pad1;
-};
-
-Vertex unpack(uint index)
-{
-	// Unpack the vertices from the SSBO using the glTF vertex structure
-	// The multiplier is the size of the vertex divided by four float components (=16 bytes)
-	const int m = ubo.vertexSize / 16;
-
-	vec4 d0 = vertices.v[m * index + 0];
-	vec4 d1 = vertices.v[m * index + 1];
-	vec4 d2 = vertices.v[m * index + 2];
-
-	Vertex v;
-	v.pos = d0.xyz;
-	v.normal = vec3(d0.w, d1.x, d1.y);
-	v.uv = vec2(d1.z, d1.w);
-	v.color = vec4(d2.x, d2.y, d2.z, 1.0);
-
-	return v;
-}
-
-
-
 
 
 
