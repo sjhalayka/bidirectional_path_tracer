@@ -1,0 +1,1020 @@
+#version 460
+#extension GL_EXT_ray_tracing : require
+#extension GL_EXT_nonuniform_qualifier : enable
+
+
+
+layout(binding = 0, set = 1) uniform sampler2D baseColorSampler;
+layout(binding = 1, set = 1) uniform sampler2D normalSampler;
+
+
+
+
+
+struct ray
+{
+	vec4 direction;
+	vec4 origin;
+	
+	bool in_use;
+
+	vec3 normal;
+
+	int child_refract_id;
+	int child_reflect_id;
+	int parent_id;
+
+	float base_color;
+	float accumulated_color;
+
+	float reflection_constant;
+	float refraction_constant;
+
+	bool external_reflection_ray;
+	bool external_refraction_ray;
+
+	int level;
+};
+
+
+// https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83
+float mod289(float x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
+vec4 mod289(vec4 x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
+vec4 perm(vec4 x){return mod289(((x * 34.0) + 1.0) * x);}
+
+float noise3(vec3 p, float wavelength){
+
+	p /= wavelength;
+
+    vec3 a = floor(p);
+    vec3 d = p - a;
+    d = d * d * (3.0 - 2.0 * d);
+
+    vec4 b = a.xxyy + vec4(0.0, 1.0, 0.0, 1.0);
+    vec4 k1 = perm(b.xyxy);
+    vec4 k2 = perm(k1.xyxy + b.zzww);
+
+    vec4 c = k2 + a.zzzz;
+    vec4 k3 = perm(c);
+    vec4 k4 = perm(c + 1.0);
+
+    vec4 o1 = fract(k3 * (1.0 / 41.0));
+    vec4 o2 = fract(k4 * (1.0 / 41.0));
+
+    vec4 o3 = o2 * d.z + o1 * (1.0 - d.z);
+    vec2 o4 = o3.yw * d.x + o3.xz * (1.0 - d.x);
+
+    return o4.y * d.y + o4.x * (1.0 - d.y);
+}
+
+
+
+ivec2 pixel_pos = ivec2(gl_LaunchIDEXT.xy);
+ivec2 res = ivec2(gl_LaunchSizeEXT.xy);
+
+const float TWO_PI = 8.0 * atan(1.0);
+
+vec3 aabb_min = vec3(-2.5, -2.5, -2.5);
+vec3 aabb_max = vec3(2.5, 2.5, 2.5);
+
+const float opacity_factor = 0.01;
+
+vec3 fog_colour = vec3(1.0, 0.5, 0.0);
+
+
+
+uint prng_state = 0;
+
+
+
+
+layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
+layout(binding = 1, set = 0, rgba8) uniform image2D color_image;
+layout(binding = 2, set = 0) uniform UBO 
+{
+	mat4 viewInverse;
+	mat4 projInverse;
+
+	mat4 transformation_matrix;
+
+	vec3 camera_pos;
+	int vertexSize;
+	bool screenshot_mode;
+
+	int tri_count;
+	int light_tri_count;
+
+} ubo;
+
+layout(binding = 3, set = 0) buffer Vertices { vec4 v[]; } vertices;
+layout(binding = 4, set = 0) buffer Indices { uint i[]; } indices;
+
+
+
+
+
+struct RayPayload
+{
+	vec3 color;
+	float dist;
+	vec3 normal;
+	float reflector;
+	float opacity;
+};
+
+layout(location = 0) rayPayloadEXT RayPayload rayPayload;
+layout(location = 2) rayPayloadEXT bool shadowed;
+
+
+
+
+// Max. number of recursion is passed via a specialization constant
+layout (constant_id = 0) const int MAX_RECURSION = 0;
+const int buffer_size = 8;
+
+
+
+
+
+
+vec3 rgb2hsv(vec3 c)
+{
+    vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+    vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+    vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+
+    float d = q.x - min(q.w, q.y);
+    float e = 1.0e-10;
+    return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+}
+
+vec3 hsv2rgb(vec3 c)
+{
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+
+float stepAndOutputRNGFloat(inout uint rngState)
+{
+  // Condensed version of pcg_output_rxs_m_xs_32_32, with simple conversion to floating-point [0,1].
+  rngState  = rngState * 747796405 + 1;
+  uint word = ((rngState >> ((rngState >> 28) + 4)) ^ rngState) * 277803737;
+  word      = (word >> 22) ^ word;
+  return float(word) / 4294967295.0f;
+}
+
+// https://github.com/nvpro-samples/vk_mini_path_tracer/blob/main/vk_mini_path_tracer/shaders/raytrace.comp.glsl#L26
+// https://www.shadertoy.com/view/fsK3zd
+// 
+vec3 RandomUnitVector(inout uint state)
+{
+    float z = stepAndOutputRNGFloat(state) * 2.0f - 1.0f;
+    float a = stepAndOutputRNGFloat(state) * TWO_PI;
+    float r = sqrt(1.0f - z * z);
+    float x = r * cos(a);
+    float y = r * sin(a);
+    return normalize(vec3(x, y, z));
+}
+
+// I forget where this came from
+vec3 cosWeightedRandomHemisphereDirection( const vec3 n, inout uint state )
+{
+  	vec2 r = vec2(stepAndOutputRNGFloat(state), stepAndOutputRNGFloat(state));
+
+	vec3  uu = normalize( cross( n, vec3(0.0,1.0,1.0) ) );
+	vec3  vv = cross( uu, n );
+	
+	float ra = sqrt(r.y);
+	float rx = ra*cos(6.2831*r.x); 
+	float ry = ra*sin(6.2831*r.x);
+	float rz = sqrt( 1.0-r.y );
+	vec3  rr = vec3( rx*uu + ry*vv + rz*n );
+    
+    return normalize( rr );
+}
+
+
+
+
+bool is_clear_line_of_sight(const vec3 pos, const vec3 light_pos)
+{
+	vec3 lightVector = normalize(light_pos);
+
+	bool shadow = false;
+
+	shadowed = true; // Make sure to set this to the default before tracing the ray!
+	traceRayEXT(topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT, 0xFF, 0, 0, 1, pos, 0.001, lightVector, 1000.0, 2);
+		
+	if(shadowed)
+		shadow = true;
+	else
+		shadow = false;
+
+	return !shadow;
+}
+
+
+
+
+int get_rand_light_triangle(void)
+{
+	return int(stepAndOutputRNGFloat(prng_state)*(ubo.light_tri_count - 1.0));
+}
+
+// https://stackoverflow.com/questions/19654251/random-point-inside-triangle-inside-java
+vec3 getRandomPointOnTriangle(vec3 A, vec3 B, vec3 C)
+{
+	float r1 = stepAndOutputRNGFloat(prng_state);
+	float r2 = stepAndOutputRNGFloat(prng_state);
+
+	float sqrtR1 = sqrt(r1);
+
+	//float x = (1 - sqrtR1) * A.x + (sqrtR1 * (1 - r2)) * B.x + (sqrtR1 * r2) * C.x;
+	//float y = (1 - sqrtR1) * A.y + (sqrtR1 * (1 - r2)) * B.y + (sqrtR1 * r2) * C.y;
+	//float z = (1 - sqrtR1) * A.z + (sqrtR1 * (1 - r2)) * B.z + (sqrtR1 * r2) * C.z;
+
+	return (1 - sqrtR1) * A + (sqrtR1 * (1 - r2)) * B + (sqrtR1 * r2) * C;
+}
+
+
+
+
+
+
+
+float trace_path_forward(const int steps, const vec3 origin, const vec3 direction, const float hue, const float eta)
+{
+	int rand_light_index = get_rand_light_triangle();
+
+	
+
+	//vec3 rand_point = getRandomPointOnTriangle();
+
+
+	vec3 o = origin; // get random point on random triangle
+	vec3 d = direction; // get random hemispherical direction
+
+	const float energy = 1.0;
+	const float caustic_energy = energy*1.0;
+
+	float ret_colour = 0;
+	float local_colour = energy;
+	float total = 0;
+
+	bool doing_refraction_caustic = false;
+
+	const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
+
+	for(int i = 0; i < steps; i++)
+	{
+//		if(true == is_clear_line_of_sight(origin, o))
+//		{
+//			local_colour = 10.0;//(rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
+//		}
+
+		const float tmin = 0.001;
+		const float tmax = 10000.0;
+
+		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, tmin, d, tmax, 0);
+
+		total += mask.r;
+		total += mask.g;
+		total += mask.b;
+
+		if(doing_refraction_caustic)
+		{
+			local_colour += caustic_energy*(rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
+			doing_refraction_caustic = false;
+		}
+		else
+		{
+			local_colour *= (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
+		}
+
+		// If hit the sky
+		if(rayPayload.dist == -1.0)
+		{
+			ret_colour += local_colour;
+			break;
+		}
+
+		// If this is simply the final step
+		// then don't throw away perfectly 
+		// good data
+		if(i == steps - 1)
+		{
+			ret_colour += local_colour;
+			break;
+		}
+
+		// If hit a light
+		if(	rayPayload.color.r == 20.0 && 
+			rayPayload.color.g == 20.0 && 
+			rayPayload.color.b == 20.0)
+		{	
+			ret_colour += local_colour;
+			break;
+		}
+
+		vec3 hitPos = o + d * rayPayload.dist;
+
+		if(stepAndOutputRNGFloat(prng_state) <= rayPayload.opacity)
+		{
+			vec3 o_reflect = hitPos + rayPayload.normal * 0.01;
+			vec3 d_reflect = reflect(d, rayPayload.normal);
+
+			vec3 o_scatter = hitPos + rayPayload.normal * 0.01;
+			vec3 d_scatter = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
+
+			o = mix(o_scatter, o_reflect, rayPayload.reflector);
+			d = normalize(mix(d_scatter, d_reflect, rayPayload.reflector));
+		}
+		else
+		{
+			doing_refraction_caustic = true;
+
+			vec3 o_transparent = vec3(0.0);
+			vec3 d_transparent = vec3(0.0);
+
+			// Incoming
+			if(dot(d, rayPayload.normal) <= 0.0)
+			{
+				o_transparent = hitPos.xyz - rayPayload.normal * 0.01f;
+				d_transparent = refract(d, rayPayload.normal, eta);
+			}
+			else // Outgoing
+			{
+				vec3 temp_dir = refract(d, -rayPayload.normal, 1.0 / eta);
+
+				if(temp_dir != vec3(0.0))
+				{
+					o_transparent = hitPos.xyz + rayPayload.normal * 0.01f;
+					d_transparent = temp_dir;
+				}
+				else
+				{
+					// Total internal reflection
+					o_transparent = hitPos.xyz - rayPayload.normal * 0.01f;
+					d_transparent = reflect(d, -rayPayload.normal);
+				}
+			}
+
+			o = o_transparent;
+			d = normalize(d_transparent);
+		}
+	}
+
+	return ret_colour / total;//(mask.r + mask.g + mask.b);
+}
+
+
+float get_radiance_forward(const int samples, const int steps, const vec3 origin, const vec3 seed_direction, const float hue, const float eta)
+{
+	float ret_colour = 0.0;
+
+	for(int s = 0; s < samples; s++)
+		ret_colour += trace_path_forward(steps, origin, seed_direction, hue, eta);
+
+	return ret_colour / samples;
+}
+
+
+float get_omni_radiance_forward(const int samples, const int steps, const vec3 origin, const float hue, const float eta)
+{
+	float ret_colour = 0.0;
+
+	for(int s = 0; s < samples; s++)
+		ret_colour += trace_path_forward(steps, origin, RandomUnitVector(prng_state), hue, eta);
+
+	return ret_colour / samples;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+float trace_path_backward(const int steps, const vec3 origin, const vec3 direction, const float hue, const float eta)
+{
+	vec3 o = origin;
+	vec3 d = direction;
+
+	const float energy = 1.0;
+	const float caustic_energy = energy*1.0;
+
+	float ret_colour = 0;
+	float local_colour = energy;
+	float total = 0;
+
+	bool doing_refraction_caustic = false;
+
+	const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
+
+	for(int i = 0; i < steps; i++)
+	{
+		const float tmin = 0.001;
+		const float tmax = 10000.0;
+
+		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, tmin, d, tmax, 0);
+
+		total += mask.r;
+		total += mask.g;
+		total += mask.b;
+
+		if(doing_refraction_caustic)
+		{
+			local_colour += caustic_energy*(rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
+			doing_refraction_caustic = false;
+		}
+		else
+		{
+			local_colour *= (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
+		}
+
+		// If hit the sky
+		if(rayPayload.dist == -1.0)
+		{
+			ret_colour += local_colour;
+			break;
+		}
+
+		// If this is simply the final step
+		// then don't throw away perfectly 
+		// good data
+		if(i == steps - 1)
+		{
+			ret_colour += local_colour;
+			break;
+		}
+
+		// If hit a light
+		if(	rayPayload.color.r == 20.0 && 
+			rayPayload.color.g == 20.0 && 
+			rayPayload.color.b == 20.0)
+		{	
+			ret_colour += local_colour;
+			break;
+		}
+
+		vec3 hitPos = o + d * rayPayload.dist;
+
+		if(stepAndOutputRNGFloat(prng_state) <= rayPayload.opacity)
+		{
+			vec3 o_reflect = hitPos + rayPayload.normal * 0.01;
+			vec3 d_reflect = reflect(d, rayPayload.normal);
+
+			vec3 o_scatter = hitPos + rayPayload.normal * 0.01;
+			vec3 d_scatter = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
+
+			o = mix(o_scatter, o_reflect, rayPayload.reflector);
+			d = normalize(mix(d_scatter, d_reflect, rayPayload.reflector));
+		}
+		else
+		{
+			doing_refraction_caustic = true;
+
+			vec3 o_transparent = vec3(0.0);
+			vec3 d_transparent = vec3(0.0);
+
+			// Incoming
+			if(dot(d, rayPayload.normal) <= 0.0)
+			{
+				o_transparent = hitPos.xyz - rayPayload.normal * 0.01f;
+				d_transparent = refract(d, rayPayload.normal, eta);
+			}
+			else // Outgoing
+			{
+				vec3 temp_dir = refract(d, -rayPayload.normal, 1.0 / eta);
+
+				if(temp_dir != vec3(0.0))
+				{
+					o_transparent = hitPos.xyz + rayPayload.normal * 0.01f;
+					d_transparent = temp_dir;
+				}
+				else
+				{
+					// Total internal reflection
+					o_transparent = hitPos.xyz - rayPayload.normal * 0.01f;
+					d_transparent = reflect(d, -rayPayload.normal);
+				}
+			}
+
+			o = o_transparent;
+			d = normalize(d_transparent);
+		}
+	}
+
+	return ret_colour / total;//(mask.r + mask.g + mask.b);
+}
+
+
+float get_radiance_backward(const int samples, const int steps, const vec3 origin, const vec3 seed_direction, const float hue, const float eta)
+{
+	float ret_colour = 0.0;
+
+	for(int s = 0; s < samples; s++)
+		ret_colour += trace_path_backward(steps, origin, seed_direction, hue, eta);
+
+	return ret_colour / samples;
+}
+
+
+float get_omni_radiance_backward(const int samples, const int steps, const vec3 origin, const float hue, const float eta)
+{
+	float ret_colour = 0.0;
+
+	for(int s = 0; s < samples; s++)
+		ret_colour += trace_path_backward(steps, origin, RandomUnitVector(prng_state), hue, eta);;
+
+	return ret_colour / samples;
+}
+
+bool in_aabb(vec3 pos, vec3 aabb_min, vec3 aabb_max)
+{
+	if((pos.x >= aabb_min.x && pos.x <= aabb_max.x) &&
+	(pos.y >= aabb_min.y && pos.y <= aabb_max.y) &&
+	(pos.z >= aabb_min.z && pos.z <= aabb_max.z))
+		return true;
+	else
+		return false;
+}
+
+bool BBoxIntersect(const vec3 boxMin, const vec3 boxMax, const vec3 origin, const vec3 dir, out float out_t0, out float out_t1)
+{
+	vec3 invdir = 1.0 / dir;
+	
+	vec3 tbot = invdir * (boxMin - origin);
+	vec3 ttop = invdir * (boxMax - origin);
+	vec3 tmin = min(ttop, tbot);
+	vec3 tmax = max(ttop, tbot);
+	vec2 t = max(tmin.xx, tmin.yz);
+	float t0 = max(t.x, t.y);
+	t = min(tmax.xx, tmax.yz);
+	float t1 = min(t.x, t.y);
+	out_t0 = t0;
+	out_t1 = t1;
+
+	return t1 > max(t0, 0.0);
+}
+
+
+float get_ray0(const float hue, const float eta)
+{
+	// This algorithm stops when the buffer runs out of space,
+	// or when the rays miss everything,
+	// or when the level is too deep
+
+	ray rays[buffer_size];
+	int current_buffer_index = 0;
+
+	const vec2 pixelCenter = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
+	const vec2 inUV = pixelCenter/vec2(gl_LaunchSizeEXT.xy);
+	vec2 d = inUV * 2.0 - 1.0;
+
+	vec4 origin = ubo.viewInverse * vec4(0,0,0,1);
+	vec4 target = ubo.projInverse * vec4(d.x, d.y, 1, 1) ;
+	vec4 direction = ubo.viewInverse*vec4(normalize(target.xyz / target.w), 0);
+
+	uint rayFlags = gl_RayFlagsOpaqueEXT;
+	uint cullMask = 0xff;
+	float tmin = 0.001;
+	float tmax = 10000.0;
+
+	// Step one: make tree of ray segments
+	for(int i = 0; i < buffer_size; i++)
+	{
+		// Initialize buffer
+		rays[i].in_use = false;
+		rays[i].child_reflect_id = -1;
+		rays[i].child_refract_id = -1;
+		rays[i].parent_id = -1;
+		rays[i].external_reflection_ray = false;
+		rays[i].external_refraction_ray = false;
+	}
+
+	rays[0].direction = direction;
+	rays[0].origin = origin;
+	rays[0].in_use = true;
+	rays[0].level = 0;
+	rays[0].external_reflection_ray = true;
+	rays[0].external_refraction_ray = false;
+	current_buffer_index++;
+
+
+
+	while(true)
+	{
+		int used_count = 0;
+
+		for(int i = 0; i < buffer_size; i++)
+		{
+			if(rays[i].in_use)
+			{
+				used_count++;
+
+//				if(ubo.screenshot_mode)
+//					rays[i].base_color = get_radiance_backward(25, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+//				else
+//					rays[i].base_color = get_radiance_backward(25, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+
+
+				if(ubo.screenshot_mode)
+					rays[i].base_color = get_radiance_forward(25, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+				else
+					rays[i].base_color = get_radiance_forward(25, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+
+
+				traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, rays[i].origin.xyz, tmin, rays[i].direction.xyz, tmax, 0);
+
+				vec4 hitPos = rays[i].origin + rays[i].direction * rayPayload.dist;
+
+
+
+
+
+
+
+				// Do some experimental fog in an AABB
+				float dist_color = 0.0;
+				float dist_opacity = 0.0;
+
+				if(false)//rays[i].external_reflection_ray || rays[i].external_refraction_ray)
+				{
+					vec3 start = rays[i].origin.xyz;
+					vec3 end = rays[i].origin.xyz;
+
+					float t0 = 0.0;
+					float t1 = 0.0;
+					const float target_step_length = 0.1;
+
+					if(in_aabb(rays[i].origin.xyz, aabb_min, aabb_max))
+					{
+						vec3 backout_pos = rays[i].origin.xyz - rays[i].direction.xyz*100.0;
+
+						if(BBoxIntersect(aabb_min, aabb_max, backout_pos, rays[i].direction.xyz, t0, t1))
+						{
+							start = backout_pos + rays[i].direction.xyz*t0;
+							end = backout_pos + rays[i].direction.xyz*t1;
+						}
+					}
+					else
+					{
+						if(BBoxIntersect(aabb_min, aabb_max, rays[i].origin.xyz, rays[i].direction.xyz, t0, t1))
+						{
+							start = rays[i].origin.xyz + rays[i].direction.xyz*t0;
+							end = rays[i].origin.xyz + rays[i].direction.xyz*t1;
+						}
+					}
+
+					if(rayPayload.dist != -1.0)
+					{
+						if(distance(rays[i].origin.xyz, start) > distance(rays[i].origin.xyz, hitPos.xyz))
+							start = hitPos.xyz + rayPayload.normal * 0.01f;
+					
+						if(distance(rays[i].origin.xyz, end) > distance(rays[i].origin.xyz, hitPos.xyz))
+							end = hitPos.xyz + rayPayload.normal * 0.01f;
+
+						if(rayPayload.opacity == 0.0) // big hack
+						{
+							start = end;
+						}
+					}
+
+					const int num_steps = int(floor((distance(start, end) / target_step_length)));
+
+					if(num_steps >= 2)
+					{
+						const vec3 step = (end - start) / (num_steps - 1);
+
+						vec3 curr_step = start;
+
+						for(int j = 0; j < num_steps; j++, curr_step += step)
+						{
+							float colour = get_omni_radiance_backward(10, 5, curr_step, hue, eta);
+
+							float noise = noise3(curr_step, 1.0);
+
+							//noise *= noise3(curr_step, 1.0/10.0);
+
+							colour *= noise;
+
+							const float trans = 1.0 - clamp(dist_opacity, 0.0, 1.0);
+							dist_color += colour*trans;
+							dist_opacity += 0.1*colour*trans;
+						}
+					}
+
+					const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
+					dist_color *= (fog_colour.r*mask.r + fog_colour.g*mask.g + fog_colour.b*mask.b);
+				}
+
+				dist_color = clamp(dist_color, 0.0, 1.0);
+				dist_opacity = clamp(dist_opacity, 0.0, 1.0);
+				rays[i].base_color = mix(rays[i].base_color, dist_color, dist_opacity);
+
+
+
+
+
+
+
+
+				// this particular ray missed everything, or got too deep
+				if(rayPayload.dist == -1.0 || rays[i].level >= MAX_RECURSION)
+				{
+					rays[i].in_use = false;
+					continue;
+				}
+
+				rays[i].normal = rayPayload.normal;
+				rays[i].reflection_constant = rayPayload.reflector;
+				rays[i].refraction_constant = rayPayload.opacity;
+
+				// entering mesh
+				if(dot(rays[i].direction.xyz, rayPayload.normal) <= 0.0)
+				{
+					if(current_buffer_index < buffer_size && rays[i].reflection_constant != 0.0)
+					{
+						rays[i].child_reflect_id = current_buffer_index;
+
+						//generate new ray segment
+						rays[current_buffer_index].origin.xyz = hitPos.xyz + rayPayload.normal * 0.01f;
+						rays[current_buffer_index].direction.xyz = reflect(rays[i].direction.xyz, rayPayload.normal);
+						rays[current_buffer_index].in_use = true;
+						rays[current_buffer_index].level = rays[i].level + 1;
+						rays[current_buffer_index].external_reflection_ray = true;
+						rays[current_buffer_index].external_refraction_ray = false;
+						rays[current_buffer_index].parent_id = i;
+						current_buffer_index++;
+					}
+
+					if(current_buffer_index < buffer_size && rays[i].refraction_constant != 1.0)
+					{
+						rays[i].child_refract_id = current_buffer_index;
+
+						//generate new ray segment
+						rays[current_buffer_index].origin.xyz = hitPos.xyz - rayPayload.normal * 0.01f;
+						rays[current_buffer_index].direction.xyz = refract(rays[i].direction.xyz, rayPayload.normal, eta);
+						rays[current_buffer_index].in_use = true;
+						rays[current_buffer_index].level = rays[i].level + 1;
+						rays[current_buffer_index].external_reflection_ray = false;
+						rays[current_buffer_index].external_refraction_ray = false;
+						rays[current_buffer_index].parent_id = i;
+						current_buffer_index++;
+					}	
+				}
+				// exiting mesh
+				else
+				{
+					if(current_buffer_index < buffer_size)
+					{
+						rays[i].child_refract_id = current_buffer_index;
+
+						vec3 temp_dir = refract(rays[i].direction.xyz, -rayPayload.normal, 1.0/eta);
+
+						if(temp_dir != vec3(0.0))
+						{
+							//generate new ray segment
+							rays[current_buffer_index].origin.xyz = hitPos.xyz + rayPayload.normal * 0.01f;
+							rays[current_buffer_index].direction.xyz = temp_dir;
+							rays[current_buffer_index].in_use = true;
+							rays[current_buffer_index].level = rays[i].level + 1;
+							rays[current_buffer_index].external_reflection_ray = false;
+							rays[current_buffer_index].external_refraction_ray = true;
+							rays[current_buffer_index].parent_id = i;
+							current_buffer_index++;
+						}
+						else
+						{
+							// Total internal reflection
+
+							//generate new ray segment
+							rays[current_buffer_index].origin.xyz = hitPos.xyz - rayPayload.normal * 0.01f;
+							rays[current_buffer_index].direction.xyz = reflect(rays[i].direction.xyz, -rayPayload.normal);
+							rays[current_buffer_index].in_use = true;
+							rays[current_buffer_index].level = rays[i].level + 1;
+							rays[current_buffer_index].external_reflection_ray = false;
+							rays[current_buffer_index].external_refraction_ray = false;
+							rays[current_buffer_index].parent_id = i;
+							current_buffer_index++;
+						}
+					}
+				}
+
+				// The processing of this ray segment is complete
+				rays[i].in_use = false;
+			}
+		}
+
+		if(used_count == 0)
+			break;
+	}
+
+	
+	
+	// Step two: this is the Fresnel reflection-refraction code
+	// Start at the tips of the branches, work backwards to the root
+	for(int i = current_buffer_index - 1; i >= 0; i--)
+	{
+		bool pure_refraction = false;
+		bool pure_reflection = false;
+		bool neither = false;
+		bool both = false;
+
+		if(rays[i].child_refract_id != -1 && rays[i].child_reflect_id == -1)
+			pure_refraction = true;
+
+		if(rays[i].child_refract_id == -1 && rays[i].child_reflect_id != -1)
+			pure_reflection = true;
+
+		if(rays[i].child_refract_id == -1 && rays[i].child_reflect_id == -1)
+			neither = true;
+
+		if(rays[i].child_refract_id != -1 && rays[i].child_reflect_id != -1)
+			both = true;
+
+		float accum = 0.0;
+
+		if(neither)
+		{
+			accum = rays[i].base_color;
+		}
+		else if(both)
+		{
+			// Fake the Fresnel refraction-reflection
+			const float ratio = 1.0 - dot(-normalize(rays[i].direction.xyz), rays[i].normal);
+
+			float reflect_accum = mix(rays[i].base_color, rays[rays[i].child_reflect_id].accumulated_color, rays[i].reflection_constant);
+			float refract_accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1.0 - rays[i].refraction_constant);
+		
+			accum = mix(refract_accum, reflect_accum, ratio);
+		}
+		else if(pure_refraction)
+		{
+			accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1.0 - rays[i].refraction_constant);	
+		}
+		else if(pure_reflection)
+		{
+			accum = mix(rays[i].base_color, rays[rays[i].child_reflect_id].accumulated_color, rays[i].reflection_constant);
+		}
+		
+		rays[i].accumulated_color = accum;
+	}
+	
+
+
+
+	// Show level depth as grayscale colour
+	//float s = 1.0 - float(rays[current_buffer_index - 1].level) / float(MAX_RECURSION);
+	// return s;
+
+
+	// Show buffer fullness as grayscale colour
+	//float s = 1.0 - float(current_buffer_index - 1) / float(buffer_size);
+	//return s;
+
+
+
+	// Return root ray segment colour
+	return rays[0].accumulated_color;
+}
+
+
+ 
+struct Vertex
+{
+  vec3 pos;
+  vec3 normal;
+  vec2 uv;
+  vec4 color;
+  vec4 _pad0; 
+  vec4 _pad1;
+};
+
+Vertex unpack(uint index)
+{
+	// Unpack the vertices from the SSBO using the glTF vertex structure
+	// The multiplier is the size of the vertex divided by four float components (=16 bytes)
+	const int m = ubo.vertexSize / 16;
+
+	vec4 d0 = vertices.v[m * index + 0];
+	vec4 d1 = vertices.v[m * index + 1];
+	vec4 d2 = vertices.v[m * index + 2];
+
+	Vertex v;
+	v.pos = d0.xyz;
+	v.normal = vec3(d0.w, d1.x, d1.y);
+	v.uv = vec2(d1.z, d1.w);
+	v.color = vec4(d2.x, d2.y, d2.z, 1.0);
+
+	return v;
+}
+
+
+
+
+
+
+
+
+
+
+void main() 
+{
+	// Do chromatic aberration (good for making rainbows via prisms)
+
+	const int channels = 20;
+
+	const float max_hue = rgb2hsv(vec3(1.0, 0.0, 1.0)).x; // violet
+	const float min_hue = rgb2hsv(vec3(1.0, 0.0, 0.0)).x; // red
+
+	const float max_eta = 0.95;
+	const float min_eta = 0.75;
+
+	const float hue_diff = max_hue - min_hue;
+	const float hue_step_size = hue_diff / (channels - 1);
+
+	const float eta_diff = max_eta - min_eta;
+	const float eta_step_size = eta_diff / (channels - 1);
+
+	float curr_hue = min_hue;
+	float curr_eta = min_eta;
+
+	vec3 total = vec3(0.0);
+	vec3 color = vec3(0.0);
+
+	// Only seed once per pixel
+	prng_state = res.x * pixel_pos.y + pixel_pos.x;
+
+	for(int i = 0; i < channels; i++, curr_hue += hue_step_size, curr_eta += eta_step_size)
+	{
+		const float f = get_ray0(curr_hue, curr_eta);
+		const vec3 mask = hsv2rgb(vec3(curr_hue, 1.0, 1.0));
+
+		total += mask;
+		color += f*mask;
+	}
+
+	color /= total;
+
+	//color = pow(color, vec3(2.2));
+
+
+
+
+
+
+	int first_index = 3*ubo.tri_count - 3*ubo.light_tri_count;
+	int num_indices = 3*ubo.tri_count;
+
+	/*
+	int count = 0;
+
+	for(int i = first_index; i < num_indices; i += 3)
+	{
+		uint index_0 = indices.i[i + 0];
+		uint index_1 = indices.i[i + 1];
+		uint index_2 = indices.i[i + 2];
+		
+		Vertex v0 = unpack(index_0);
+		Vertex v1 = unpack(index_1);
+		Vertex v2 = unpack(index_2);
+
+		vec4 c0 = texture(baseColorSampler, v0.uv);
+		vec4 c1 = texture(baseColorSampler, v1.uv);
+		vec4 c2 = texture(baseColorSampler, v2.uv);
+
+		if(	c0 == vec4(1.0, 1.0, 1.0, 1.0) &&
+			c1 == vec4(1.0, 1.0, 1.0, 1.0) &&
+			c2 == vec4(1.0, 1.0, 1.0, 1.0))
+		{
+			count++;
+		}
+	}
+	*/
+
+//	if(count == 4968)
+//		imageStore(color_image, pixel_pos, vec4(vec3(1.0), 0.0));
+//	else
+		imageStore(color_image, pixel_pos, vec4(color, 0.0));
+
+}
+
+
