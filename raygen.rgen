@@ -339,7 +339,7 @@ float trace_path_forward(const int steps, const vec3 eye, const vec3 direction, 
 
 	float area = get_area_by_light_index(index);
 
-	const float energy = area/100.0;
+	const float energy = 1.0;//area;
 
 	float ret_colour = 0;
 	float local_colour = energy;

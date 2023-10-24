@@ -537,9 +537,9 @@ public:
 
 
 	VkTransformMatrixKHR transformMatrix = {
-				0.025f, 0.0f, 0.0f, 0.0f,
-				0.0f, 0.025f, 0.0f, 0.0f,
-				0.0f, 0.0f, 0.025f, 0.0f };
+				1.0f, 0.0f, 0.0f, 0.0f,
+				0.0f, 1.0f, 0.0f, 0.0f,
+				0.0f, 0.0f, 1.0f, 0.0f };
 
 	clock_t start = std::clock();
 
@@ -625,26 +625,19 @@ public:
 		// https://drive.google.com/file/d/1BJJSC_K8NwaH8kP4tQpxlAmc6h6N3Ii1/view
 		if (do_init)
 		{
-
-
 			scene.loadFromFile(
 				indexBuffer,
 				vertexBuffer,
 				gltfimages,
-				"C:/temp/rob_rau_cornell/gltf/cornell.gltf", 
+				"C:/temp/rob_rau_cornell/gltf/cornell.gltf",
 				//"C:/temp/rob_rau_cornell/bunny2/bunny2.gltf",
 				tri_count,
 				light_tri_count,
 				vulkanDevice,
 				queue,
-				glTFLoadingFlags);
+				glTFLoadingFlags,
+				1.0f);
 		
-			for (size_t i = 0; i < vertexBuffer.size(); i++)
-			{
-				vertexBuffer[i].pos.x *= 0.025f;
-				vertexBuffer[i].pos.y *= 0.025f;
-				vertexBuffer[i].pos.z *= 0.025f;
-			}
 
 
 		
