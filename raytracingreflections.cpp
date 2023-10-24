@@ -629,18 +629,14 @@ public:
 				indexBuffer,
 				vertexBuffer,
 				gltfimages,
-				"C:/temp/rob_rau_cornell/gltf/cornell.gltf",
-				//"C:/temp/rob_rau_cornell/bunny2/bunny2.gltf",
+				//"C:/temp/rob_rau_cornell/gltf/cornell.gltf",
+				"C:/temp/rob_rau_cornell/bunny2/bunny2.gltf",
 				tri_count,
 				light_tri_count,
 				vulkanDevice,
 				queue,
 				glTFLoadingFlags,
 				1.0f);
-		
-
-
-		
 		}
 
 
