@@ -113,6 +113,7 @@ layout(binding = 4, set = 0) buffer Indices { uint i[]; } indices;
 
 
 
+
 struct RayPayload
 {
 	vec3 color;
@@ -229,6 +230,62 @@ vec3 cosWeightedRandomHemisphereDirection( const vec3 n, inout uint state )
 
 
 
+void get_triangle_vertices_by_light_index(inout Vertex v0, inout Vertex v1, inout Vertex v2, int index)
+{
+	int first_index = 3*ubo.tri_count - 3*ubo.light_tri_count + 3*index;
+
+	uint index_0 = indices.i[first_index + 0];
+	uint index_1 = indices.i[first_index + 1];
+	uint index_2 = indices.i[first_index + 2];
+		
+	v0 = unpack(index_0);
+	v1 = unpack(index_1);
+	v2 = unpack(index_2);
+}
+
+vec3 get_normal_by_light_index(int index)
+{
+	int first_index = 3*ubo.tri_count - 3*ubo.light_tri_count + 3*index;
+
+	uint index_0 = indices.i[first_index + 0];
+	uint index_1 = indices.i[first_index + 1];
+	uint index_2 = indices.i[first_index + 2];
+		
+	Vertex v0 = unpack(index_0);
+	Vertex v1 = unpack(index_1);
+	Vertex v2 = unpack(index_2);
+
+	vec3 ba = v1.pos - v0.pos;
+	vec3 ca = v2.pos - v0.pos;	
+	vec3 tri_cross = cross(ba, ca);
+
+	vec3 normal = normalize(tri_cross);
+
+	return normal;
+}
+
+float get_area_by_light_index(int index)
+{
+	int first_index = 3*ubo.tri_count - 3*ubo.light_tri_count + 3*index;
+
+	uint index_0 = indices.i[first_index + 0];
+	uint index_1 = indices.i[first_index + 1];
+	uint index_2 = indices.i[first_index + 2];
+		
+	Vertex v0 = unpack(index_0);
+	Vertex v1 = unpack(index_1);
+	Vertex v2 = unpack(index_2);
+
+	vec3 ba = v1.pos - v0.pos;
+	vec3 ca = v2.pos - v0.pos;
+	vec3 tri_cross = cross(ba, ca);
+
+	float area = 0.5*length(tri_cross);
+
+	return area;
+}
+
+
 bool is_clear_line_of_sight(const vec3 pos, const vec3 light_pos)
 {
 	vec3 lightVector = normalize(light_pos);
@@ -251,6 +308,8 @@ bool is_clear_line_of_sight(const vec3 pos, const vec3 light_pos)
 // https://stackoverflow.com/questions/19654251/random-point-inside-triangle-inside-java
 vec3 getRandomPointOnTriangle(vec3 A, vec3 B, vec3 C)
 {
+	//return (A + B + C)/3.0;
+
 	float r1 = stepAndOutputRNGFloat(prng_state);
 	float r2 = stepAndOutputRNGFloat(prng_state);
 
@@ -268,37 +327,21 @@ vec3 getRandomPointOnTriangle(vec3 A, vec3 B, vec3 C)
 
 
 
-void get_rand_light_triangle(inout Vertex A, inout Vertex B, inout Vertex C, inout vec3 normal, inout float area, inout uint index)
+void get_rand_light_triangle(inout Vertex A, inout Vertex B, inout Vertex C, inout int index)
 {
 	// index is 0 to ubo.light_tri_count - 1.0
 	index = int(stepAndOutputRNGFloat(prng_state)*(ubo.light_tri_count - 1.0));
 
-	uint first_index = 3*ubo.tri_count - 3*ubo.light_tri_count + 3*index;
-
-	uint index_0 = indices.i[first_index + 0];
-	uint index_1 = indices.i[first_index + 1];
-	uint index_2 = indices.i[first_index + 2];
-
-	A = unpack(index_0);
-	B = unpack(index_1);
-	C = unpack(index_2);
-	
-	vec3 ba = B.pos - A.pos;
-	vec3 ca = C.pos - A.pos;
-	vec3 tri_cross = cross(ba, ca);
-
-	normal = normalize(tri_cross);
-	area = 0.5*length(tri_cross);
+	get_triangle_vertices_by_light_index(A, B, C, index);
 }
 
-void get_rand_light_origin_and_direction(inout vec3 origin, inout vec3 direction)
+void get_rand_light_origin_and_direction(inout vec3 origin, inout vec3 direction, int index)
 {
 	Vertex A, B, C;
-	vec3 normal = vec3(0.0);
-	float area = 0.0;
-	uint index = 0;
+	index = 0;
 
-	get_rand_light_triangle(A, B, C, normal, area, index);
+	get_rand_light_triangle(A, B, C, index);
+	vec3 normal = get_normal_by_light_index(index);
 
 	origin = getRandomPointOnTriangle(A.pos, B.pos, C.pos);
 	direction = cosWeightedRandomHemisphereDirection(normal, prng_state);
@@ -307,9 +350,16 @@ void get_rand_light_origin_and_direction(inout vec3 origin, inout vec3 direction
 
 float trace_path_forward(const int steps, const vec3 eye, const vec3 direction, const float hue, const float eta)
 {
-	vec3 o; //get random point on random triangle
-	vec3 d; // get random hemispherical direction
-	get_rand_light_origin_and_direction(o, d);
+	vec3 o, d;
+	int index = 0;
+	get_rand_light_origin_and_direction(o, d, index);
+	area = get_area_by_light_index(index);
+	
+
+//	o = eye;
+//	d = direction;
+
+
 
 	const float energy = 1.0; // use energy proportional to triangle area
 	const float caustic_energy = energy*1.0;
@@ -324,37 +374,22 @@ float trace_path_forward(const int steps, const vec3 eye, const vec3 direction, 
 
 	for(int i = 0; i < steps; i++)
 	{
-
 		total += mask.r;
 		total += mask.g;
 		total += mask.b;
-
-
-		if(true == is_clear_line_of_sight(eye, o))
-		{
-	//		ret_colour += local_colour;
-	//		break;
-		}
-
 
 		const float tmin = 0.001;
 		const float tmax = 10000.0;
 
 		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, tmin, d, tmax, 0);
 
-		if(doing_refraction_caustic)
+		local_colour *= (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
+
+		if(true == is_clear_line_of_sight(eye, o))
 		{
-			local_colour += caustic_energy*(rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
-			doing_refraction_caustic = false;
+			ret_colour = 1;//+= local_colour;
+			break;
 		}
-		else
-		{
-			local_colour *= (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
-		}
-
-
-
-
 
 		// If hit the sky
 		if(rayPayload.dist == -1.0)
@@ -381,57 +416,14 @@ float trace_path_forward(const int steps, const vec3 eye, const vec3 direction, 
 			break;
 		}
 
-
-
 		vec3 hitPos = o + d * rayPayload.dist;
 
-		if(stepAndOutputRNGFloat(prng_state) <= rayPayload.opacity)
-		{
-			vec3 o_reflect = hitPos + rayPayload.normal * 0.01;
-			vec3 d_reflect = reflect(d, rayPayload.normal);
+		o = hitPos + rayPayload.normal * 0.01;
+		d = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
 
-			vec3 o_scatter = hitPos + rayPayload.normal * 0.01;
-			vec3 d_scatter = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
-
-			o = mix(o_scatter, o_reflect, rayPayload.reflector);
-			d = normalize(mix(d_scatter, d_reflect, rayPayload.reflector));
-		}
-		else
-		{
-			doing_refraction_caustic = true;
-
-			vec3 o_transparent = vec3(0.0);
-			vec3 d_transparent = vec3(0.0);
-
-			// Incoming
-			if(dot(d, rayPayload.normal) <= 0.0)
-			{
-				o_transparent = hitPos.xyz - rayPayload.normal * 0.01f;
-				d_transparent = refract(d, rayPayload.normal, eta);
-			}
-			else // Outgoing
-			{
-				vec3 temp_dir = refract(d, -rayPayload.normal, 1.0 / eta);
-
-				if(temp_dir != vec3(0.0))
-				{
-					o_transparent = hitPos.xyz + rayPayload.normal * 0.01f;
-					d_transparent = temp_dir;
-				}
-				else
-				{
-					// Total internal reflection
-					o_transparent = hitPos.xyz - rayPayload.normal * 0.01f;
-					d_transparent = reflect(d, -rayPayload.normal);
-				}
-			}
-
-			o = o_transparent;
-			d = normalize(d_transparent);
-		}
 	}
 
-	return ret_colour / total;//(mask.r + mask.g + mask.b);
+	return ret_colour;// / total;//(mask.r + mask.g + mask.b);
 }
 
 
@@ -1015,14 +1007,24 @@ void main()
 
 
 
+
+	/*
+
+
 	int first_index = 3*ubo.tri_count - 3*ubo.light_tri_count;
 	int num_indices = 3*ubo.tri_count;
 
-	/*
+
+
+
 	int count = 0;
 
 	for(int i = first_index; i < num_indices; i += 3)
 	{
+		float area = get_area_by_light_index(i/3);
+
+
+
 		uint index_0 = indices.i[i + 0];
 		uint index_1 = indices.i[i + 1];
 		uint index_2 = indices.i[i + 2];
@@ -1035,16 +1037,41 @@ void main()
 		vec4 c1 = texture(baseColorSampler, v1.uv);
 		vec4 c2 = texture(baseColorSampler, v2.uv);
 
-		if(	c0 == vec4(1.0, 1.0, 1.0, 1.0) &&
-			c1 == vec4(1.0, 1.0, 1.0, 1.0) &&
-			c2 == vec4(1.0, 1.0, 1.0, 1.0))
+		vec3 ba = v1.pos - v0.pos;
+		vec3 ca = v2.pos - v0.pos;
+		vec3 tri_cross = cross(ba, ca);
+
+		vec3 normal = normalize(tri_cross);
+		float area = 0.5*length(tri_cross);
+
+
+		if(area == 0.0)
 		{
 			count++;
 		}
+
+
+
+
+		
+//		if(	c0 == vec4(1.0, 1.0, 1.0, 1.0) &&
+//			c1 == vec4(1.0, 1.0, 1.0, 1.0) &&
+//			c2 == vec4(1.0, 1.0, 1.0, 1.0))
+//		{
+//			count++;
+//		}
+	
+	
 	}
+
+
 	*/
 
-//	if(count == 4968)
+
+
+
+
+//	if(count == 0)
 //		imageStore(color_image, pixel_pos, vec4(vec3(1.0), 0.0));
 //	else
 		imageStore(color_image, pixel_pos, vec4(color, 0.0));
