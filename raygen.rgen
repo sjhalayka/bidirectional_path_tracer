@@ -132,7 +132,7 @@ layout(location = 2) rayPayloadEXT bool shadowed;
 // Max. number of recursion is passed via a specialization constant
 layout (constant_id = 0) const int MAX_RECURSION = 0;
 const int buffer_size = 8;
-
+const int max_bounces = 5;
 
 
 
@@ -308,6 +308,7 @@ bool is_clear_line_of_sight(vec3 pos, const vec3 light_pos)
 
 
 // https://stackoverflow.com/questions/19654251/random-point-inside-triangle-inside-java
+// https://math.stackexchange.com/questions/538458/how-to-sample-points-on-a-triangle-surface-in-3d
 vec3 getRandomPointOnTriangle(vec3 A, vec3 B, vec3 C)
 {
 	float r1 = stepAndOutputRNGFloat(prng_state);
@@ -321,7 +322,7 @@ vec3 getRandomPointOnTriangle(vec3 A, vec3 B, vec3 C)
 
 
 
-float trace_path_forward(const int steps, const vec3 eye, const vec3 direction, const float hue, const float eta)
+float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, const float eta)
 {
 	vec3 o = vec3(0.0);
 	vec3 d = vec3(0.0);
@@ -334,6 +335,7 @@ float trace_path_forward(const int steps, const vec3 eye, const vec3 direction, 
 
 	get_triangle_vertices_by_light_index(A, B, C, index);
 
+	// Use backward tracing to test the algorithm
 	o = eye;//getRandomPointOnTriangle(A.pos, B.pos, C.pos);
 	d = direction;//cosWeightedRandomHemisphereDirection(get_normal_by_light_index(index), prng_state);
 
@@ -347,7 +349,28 @@ float trace_path_forward(const int steps, const vec3 eye, const vec3 direction, 
 
 	const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
 
-	for(int i = 0; i < steps; i++)
+	uint step_index = 0;
+	vec3 step_locations[max_bounces + 2];
+
+	step_locations[step_index] = o;
+	step_index++;
+
+	traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, 0.001, d, 10000.0, 0);
+
+	if(rayPayload.dist != -1.0)
+	{
+		vec3 hitPos = o + d * rayPayload.dist;
+
+		step_locations[step_index] = hitPos;
+		step_index++;
+	}
+	else
+	{
+		return 0.0;
+	}
+
+
+	for(int i = 0; i < max_bounces; i++)
 	{
 		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, 0.001, d, 10000.0, 0);
 
@@ -357,10 +380,10 @@ float trace_path_forward(const int steps, const vec3 eye, const vec3 direction, 
 		total += mask.g;
 		total += mask.b;
 
-		if(true == is_clear_line_of_sight(eye, o))
+		if(true == is_clear_line_of_sight(step_locations[1], o))
 		{
-		//	ret_colour += local_colour;
-		//	break;
+	//		ret_colour += local_colour;
+	//		break;
 		}
 
 		// If hit the sky
@@ -373,7 +396,7 @@ float trace_path_forward(const int steps, const vec3 eye, const vec3 direction, 
 		// If this is simply the final step
 		// then don't throw away perfectly 
 		// good data
-		if(i == steps - 1)
+		if(i == max_bounces - 1)
 		{
 			ret_colour += local_colour;
 			break;
@@ -392,18 +415,22 @@ float trace_path_forward(const int steps, const vec3 eye, const vec3 direction, 
 
 		o = hitPos + rayPayload.normal * 0.01;
 		d = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
+
+		step_locations[step_index] = hitPos;
+		step_index++;
 	}
+
 
 	return ret_colour / total;//(mask.r + mask.g + mask.b);
 }
 
 
-float get_radiance_forward(const int samples, const int steps, const vec3 origin, const vec3 direction, const float hue, const float eta)
+float get_radiance_forward(const int samples, const vec3 origin, const vec3 direction, const float hue, const float eta)
 {
 	float ret_colour = 0.0;
 
 	for(int s = 0; s < samples; s++)
-		ret_colour += trace_path_forward(steps, origin, direction, hue, eta);
+		ret_colour += trace_path_forward(origin, direction, hue, eta);
 
 	return ret_colour / samples;
 }
@@ -654,9 +681,9 @@ float get_ray0(const float hue, const float eta)
 
 
 				if(ubo.screenshot_mode)
-					rays[i].base_color = get_radiance_forward(25, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+					rays[i].base_color = get_radiance_forward(25, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 				else
-					rays[i].base_color = get_radiance_forward(25, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+					rays[i].base_color = get_radiance_forward(25, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 
 
 				traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, rays[i].origin.xyz, tmin, rays[i].direction.xyz, tmax, 0);
