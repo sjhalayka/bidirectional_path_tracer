@@ -286,9 +286,11 @@ float get_area_by_light_index(int index)
 }
 
 
-bool is_clear_line_of_sight(const vec3 pos, const vec3 light_pos)
+bool is_clear_line_of_sight(vec3 pos, const vec3 light_pos)
 {
 	vec3 lightVector = normalize(light_pos);
+
+	pos += lightVector*0.01;
 
 	bool shadow = false;
 
@@ -308,16 +310,10 @@ bool is_clear_line_of_sight(const vec3 pos, const vec3 light_pos)
 // https://stackoverflow.com/questions/19654251/random-point-inside-triangle-inside-java
 vec3 getRandomPointOnTriangle(vec3 A, vec3 B, vec3 C)
 {
-	//return (A + B + C)/3.0;
-
 	float r1 = stepAndOutputRNGFloat(prng_state);
 	float r2 = stepAndOutputRNGFloat(prng_state);
 
 	float sqrtR1 = sqrt(r1);
-
-	//float x = (1 - sqrtR1) * A.x + (sqrtR1 * (1 - r2)) * B.x + (sqrtR1 * r2) * C.x;
-	//float y = (1 - sqrtR1) * A.y + (sqrtR1 * (1 - r2)) * B.y + (sqrtR1 * r2) * C.y;
-	//float z = (1 - sqrtR1) * A.z + (sqrtR1 * (1 - r2)) * B.z + (sqrtR1 * r2) * C.z;
 
 	return (1 - sqrtR1) * A + (sqrtR1 * (1 - r2)) * B + (sqrtR1 * r2) * C;
 }
@@ -325,70 +321,46 @@ vec3 getRandomPointOnTriangle(vec3 A, vec3 B, vec3 C)
 
 
 
-
-
-void get_rand_light_triangle(inout Vertex A, inout Vertex B, inout Vertex C, inout int index)
-{
-	// index is 0 to ubo.light_tri_count - 1.0
-	index = int(stepAndOutputRNGFloat(prng_state)*(ubo.light_tri_count - 1.0));
-
-	get_triangle_vertices_by_light_index(A, B, C, index);
-}
-
-void get_rand_light_origin_and_direction(inout vec3 origin, inout vec3 direction, int index)
-{
-	Vertex A, B, C;
-	index = 0;
-
-	get_rand_light_triangle(A, B, C, index);
-	vec3 normal = get_normal_by_light_index(index);
-
-	origin = getRandomPointOnTriangle(A.pos, B.pos, C.pos);
-	direction = cosWeightedRandomHemisphereDirection(normal, prng_state);
-}
-
-
 float trace_path_forward(const int steps, const vec3 eye, const vec3 direction, const float hue, const float eta)
 {
-	vec3 o, d;
-	int index = 0;
-	get_rand_light_origin_and_direction(o, d, index);
-	area = get_area_by_light_index(index);
-	
+	vec3 o = vec3(0.0);
+	vec3 d = vec3(0.0);
 
-//	o = eye;
-//	d = direction;
+	// Pseudorandomly pick a triangle to emit light
+	Vertex A, B, C;
 
+	// index is 0 to ubo.light_tri_count - 1.0
+	int index = int(stepAndOutputRNGFloat(prng_state)*(ubo.light_tri_count - 1.0));
 
+	get_triangle_vertices_by_light_index(A, B, C, index);
 
-	const float energy = 1.0; // use energy proportional to triangle area
-	const float caustic_energy = energy*1.0;
+	o = eye;//getRandomPointOnTriangle(A.pos, B.pos, C.pos);
+	d = direction;//cosWeightedRandomHemisphereDirection(get_normal_by_light_index(index), prng_state);
+
+	float area = get_area_by_light_index(index);
+
+	const float energy = area/100.0;
 
 	float ret_colour = 0;
 	float local_colour = energy;
 	float total = 0;
 
-	bool doing_refraction_caustic = false;
-
 	const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
 
 	for(int i = 0; i < steps; i++)
 	{
+		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, 0.001, d, 10000.0, 0);
+
+		local_colour *= (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
+		
 		total += mask.r;
 		total += mask.g;
 		total += mask.b;
 
-		const float tmin = 0.001;
-		const float tmax = 10000.0;
-
-		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, tmin, d, tmax, 0);
-
-		local_colour *= (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
-
 		if(true == is_clear_line_of_sight(eye, o))
 		{
-			ret_colour = 1;//+= local_colour;
-			break;
+		//	ret_colour += local_colour;
+		//	break;
 		}
 
 		// If hit the sky
@@ -420,33 +392,22 @@ float trace_path_forward(const int steps, const vec3 eye, const vec3 direction, 
 
 		o = hitPos + rayPayload.normal * 0.01;
 		d = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
-
 	}
 
-	return ret_colour;// / total;//(mask.r + mask.g + mask.b);
+	return ret_colour / total;//(mask.r + mask.g + mask.b);
 }
 
 
-float get_radiance_forward(const int samples, const int steps, const vec3 origin, const vec3 seed_direction, const float hue, const float eta)
+float get_radiance_forward(const int samples, const int steps, const vec3 origin, const vec3 direction, const float hue, const float eta)
 {
 	float ret_colour = 0.0;
 
 	for(int s = 0; s < samples; s++)
-		ret_colour += trace_path_forward(steps, origin, seed_direction, hue, eta);
+		ret_colour += trace_path_forward(steps, origin, direction, hue, eta);
 
 	return ret_colour / samples;
 }
 
-
-float get_omni_radiance_forward(const int samples, const int steps, const vec3 origin, const float hue, const float eta)
-{
-	float ret_colour = 0.0;
-
-	for(int s = 0; s < samples; s++)
-		ret_colour += trace_path_forward(steps, origin, RandomUnitVector(prng_state), hue, eta);
-
-	return ret_colour / samples;
-}
 
 
 

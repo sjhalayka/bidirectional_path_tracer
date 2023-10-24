@@ -36,51 +36,6 @@ using std::ostringstream;
 size_t tri_count = 0;
 size_t light_tri_count = 0;
 
-/*
-class Vertex
-{
-
-public:
-	glm::vec3 pos;
-	glm::vec3 color;
-	glm::vec2 texCoord;
-
-	static VkVertexInputBindingDescription getBindingDescription() {
-		VkVertexInputBindingDescription bindingDescription{};
-		bindingDescription.binding = 0;
-		bindingDescription.stride = sizeof(Vertex);
-		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-		return bindingDescription;
-	}
-
-	static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
-		std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
-
-		attributeDescriptions[0].binding = 0;
-		attributeDescriptions[0].location = 0;
-		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[0].offset = offsetof(Vertex, pos);
-
-		attributeDescriptions[1].binding = 0;
-		attributeDescriptions[1].location = 1;
-		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[1].offset = offsetof(Vertex, color);
-
-		attributeDescriptions[2].binding = 0;
-		attributeDescriptions[2].location = 2;
-		attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
-
-		return attributeDescriptions;
-	}
-
-	bool operator==(const Vertex& other) const {
-		return pos == other.pos && color == other.color && texCoord == other.texCoord;
-	}
-};
-
-*/
 
 
 
@@ -223,7 +178,7 @@ public:
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 
 		VkSpecializationMapEntry specializationMapEntry = vks::initializers::specializationMapEntry(0, 0, sizeof(uint32_t));
-		uint32_t maxRecursion = 4;
+		uint32_t maxRecursion = 8;
 		VkSpecializationInfo specializationInfo = vks::initializers::specializationInfo(1, &specializationMapEntry, sizeof(maxRecursion), &maxRecursion);
 
 		// Ray generation group
@@ -676,15 +631,27 @@ public:
 				indexBuffer,
 				vertexBuffer,
 				gltfimages,
-				//"C:/temp/rob_rau_cornell/gltf/cornell.gltf", 
-				"C:/temp/rob_rau_cornell/bunny2/bunny2.gltf",
+				"C:/temp/rob_rau_cornell/gltf/cornell.gltf", 
+				//"C:/temp/rob_rau_cornell/bunny2/bunny2.gltf",
 				tri_count,
 				light_tri_count,
 				vulkanDevice,
 				queue,
 				glTFLoadingFlags);
+		
+			for (size_t i = 0; i < vertexBuffer.size(); i++)
+			{
+				vertexBuffer[i].pos.x *= 0.025f;
+				vertexBuffer[i].pos.y *= 0.025f;
+				vertexBuffer[i].pos.z *= 0.025f;
+			}
 
+
+		
 		}
+
+
+
 
 
 		//scene.loadFromFile("C:/temp/rob_rau_cornell/prism3/cornell_prism3.gltf", vulkanDevice, queue, glTFLoadingFlags);
