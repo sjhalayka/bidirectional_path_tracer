@@ -21,10 +21,15 @@
 			"mesh":0,
 			"name":"CornellBoxExport3",
 			"rotation":[
-				0.7071068286895752,
+				0.70710688829422,
 				0,
 				0,
-				0.7071068286895752
+				0.7071066498756409
+			],
+			"scale":[
+				0.02500000037252903,
+				0.02500000409781933,
+				0.02500000409781933
 			]
 		}
 	],
@@ -36,25 +41,23 @@
 				1,
 				1
 			],
-			"normalTexture":{
-				"index":0
-			},
 			"extensions":{
 				"KHR_materials_transmission":{
 					"transmissionFactor":1
 				},
 				"KHR_materials_specular":{
-					"specularColorFactor":[
-						1,
-						1,
-						1
-					]
+					"specularColorTexture":{
+						"index":0
+					}
 				}
 			},
 			"name":"Colors",
+			"normalTexture":{
+				"index":1
+			},
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
-					"index":1
+					"index":2
 				},
 				"metallicFactor":0,
 				"roughnessFactor":0.8999999761581421
@@ -85,9 +88,18 @@
 		{
 			"sampler":0,
 			"source":1
+		},
+		{
+			"sampler":0,
+			"source":2
 		}
 	],
 	"images":[
+		{
+			"mimeType":"image/png",
+			"name":"Image",
+			"uri":"Image.png"
+		},
 		{
 			"mimeType":"image/png",
 			"name":"GlowMapWithReflectionAlpha512",
@@ -103,7 +115,7 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":1834,
+			"count":2272,
 			"max":[
 				53.712074279785156,
 				99.80492401123047,
@@ -119,13 +131,13 @@
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":1834,
+			"count":2272,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":1834,
+			"count":2272,
 			"type":"VEC3"
 		},
 		{
@@ -138,26 +150,26 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":22008,
+			"byteLength":27264,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":14672,
-			"byteOffset":22008,
+			"byteLength":18176,
+			"byteOffset":27264,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":22008,
-			"byteOffset":36680,
+			"byteLength":27264,
+			"byteOffset":45440,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":11952,
-			"byteOffset":58688,
+			"byteOffset":72704,
 			"target":34963
 		}
 	],
@@ -169,7 +181,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":70640,
+			"byteLength":84656,
 			"uri":"cornell.bin"
 		}
 	]
