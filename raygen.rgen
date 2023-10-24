@@ -326,9 +326,9 @@ float trace_path_forward(const int steps, const vec3 eye, const vec3 direction, 
 	vec3 o = vec3(0.0);
 	vec3 d = vec3(0.0);
 
-	// Pseudorandomly pick a triangle to emit light
 	Vertex A, B, C;
 
+	// Pseudorandomly pick a triangle to emit light
 	// index is 0 to ubo.light_tri_count - 1.0
 	int index = int(stepAndOutputRNGFloat(prng_state)*(ubo.light_tri_count - 1.0));
 
@@ -339,7 +339,7 @@ float trace_path_forward(const int steps, const vec3 eye, const vec3 direction, 
 
 	float area = get_area_by_light_index(index);
 
-	const float energy = area;
+	const float energy = 1.0;//area;
 
 	float ret_colour = 0;
 	float local_colour = energy;
