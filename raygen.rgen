@@ -136,6 +136,7 @@ const int max_bounces = 5;
 
 
 
+
 struct Vertex
 {
   vec3 pos;
@@ -558,14 +559,14 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 		step_locations[step_count] = hitPos;
 		step_count++;
 
-		o = hitPos + rayPayload.normal * 0.01;
-		d = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
-
-		if(true == is_clear_line_of_sight(step_locations[1], step_locations[step_count - 1]))
+		if(true == is_clear_line_of_sight(step_locations[1], hitPos))
 		{
 			found_path = true;
 			break;
-		}	
+		}
+
+		o = hitPos + rayPayload.normal * 0.01;
+		d = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
 	}
 
 	
@@ -592,7 +593,6 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 	float ret_colour = 0;
 	float local_colour = energy;
 	float total = 0;
-
 
 	for(int i = 0; i < step_count - 1; i++)
 	{
