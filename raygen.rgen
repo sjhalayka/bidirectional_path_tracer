@@ -490,9 +490,6 @@ float get_omni_radiance_backward(const int samples, const int steps, const vec3 
 
 float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, const float eta)
 {
-	//vec3 o = vec3(0.0);
-	//vec3 d = vec3(0.0);
-
 	Vertex A, B, C;
 
 	// Pseudorandomly pick a triangle to emit light
@@ -505,18 +502,7 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 	const vec3 light_o = getRandomPointOnTriangle(A.pos, B.pos, C.pos);
 	const vec3 light_d = cosWeightedRandomHemisphereDirection(get_normal_by_light_index(index), prng_state);
 
-	vec3 o = light_o;
-	vec3 d = light_d;
-
-	
-	
-	
 	float area = get_area_by_light_index(index);
-
-
-
-
-
 
 	uint step_count = 0;
 	vec3 step_locations[max_bounces + 3];
@@ -538,6 +524,10 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 		return 0.0;
 	}
 
+	
+	vec3 o = light_o;
+	vec3 d = light_d;
+
 	step_locations[step_count] = light_o; // light position
 	step_count++;
 
@@ -549,6 +539,12 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 
 	for(int i = 0; i < max_bounces; i++)
 	{
+		if(true == is_clear_line_of_sight(step_locations[1], step_locations[step_count - 1]))
+		{
+			found_path = true;
+			break;
+		}
+
 		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, 0.001, d, 10000.0, 0);
 	
 		// If hit the sky
@@ -559,23 +555,17 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 
 		step_locations[step_count] = hitPos;
 		step_count++;
-			
-		if(true == is_clear_line_of_sight(step_locations[1], hitPos))
-		{
-			found_path = true;
-			break;
-		}
 
 		o = hitPos + rayPayload.normal * 0.01;
 		d = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
 	}
 
 	if(found_path == false)
-		trace_path_backward(max_bounces, eye, direction, hue, eta);
+		return trace_path_backward(max_bounces, eye, direction, hue, eta);
 
 	vec3 temp_last = step_locations[step_count - 1];
 
-	// Reverse the lasrt part of the path
+	// Reverse the last part of the path
 	uint start = 2;
 	uint end = step_count - 1;
 
@@ -588,7 +578,15 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
         end--; 
    }   
 
-//	if(temp_last == step_locations[2])
+   
+//	if(light_o == step_locations[step_count - 1] && temp_last == step_locations[2])
+//		return 1.0;
+//	else
+//		return 0.0;
+		
+
+
+//	if()
 //		return 1.0;
 //	else
 //		return 0.0;
@@ -623,8 +621,8 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 		// good data
 		if(i == step_count - 2)
 		{
-//			ret_colour += local_colour;
-//			break;
+			ret_colour += local_colour;
+			break;
 		}
 
 		// If hit a light
