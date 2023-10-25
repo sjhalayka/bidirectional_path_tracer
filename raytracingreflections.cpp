@@ -51,7 +51,7 @@ public:
 
 	const float fovy = 45.0f;
 	const float near_plane = 0.01f;
-	const float far_plane = 1000.0f;
+	const float far_plane = 10000.0f;
 	const float pi = 4.0f * atanf(1.0f);
 	const float deg_to_rad = (1.0f / 360.0f) * 2.0f * pi;
 
@@ -555,8 +555,8 @@ public:
 
 		bool screenshot_mode;
 
-		int32_t tri_count;
-		int32_t light_tri_count;
+		uint32_t tri_count;
+		uint32_t light_tri_count;
 
 	} uniformData;
 	vks::Buffer ubo;

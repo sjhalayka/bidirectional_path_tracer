@@ -1310,10 +1310,20 @@ void vkglTF::Model::loadFromFile(
 				}
 			}
 
-			for (size_t i = 0; i < light_indices.size(); i++)
-				temp_indices.push_back(light_indices[i]);
 
-			indexBuffer = temp_indices;
+			for (size_t i = 0; i < temp_indices.size(); i++)
+				light_indices.push_back(temp_indices[i]);
+
+			indexBuffer = light_indices;
+
+
+
+
+
+			//for (size_t i = 0; i < light_indices.size(); i++)
+			//	temp_indices.push_back(light_indices[i]);
+
+			//indexBuffer = temp_indices;
 
 			//std::ostringstream oss;
 			//oss << num_triangles << " " << num_light_triangles;

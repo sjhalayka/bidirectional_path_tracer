@@ -31,8 +31,8 @@ layout(binding = 2, set = 0) uniform UBO
 	int vertexSize;
 	bool screenshot_mode;
 
-	int tri_count;
-	int light_tri_count;
+	uint tri_count;
+	uint light_tri_count;
 } ubo;
 
 layout(binding = 3, set = 0) buffer Vertices { vec4 v[]; } vertices;
