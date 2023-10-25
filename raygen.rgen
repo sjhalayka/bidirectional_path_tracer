@@ -491,9 +491,7 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 
 	Vertex A, B, C;
 
-	// Pseudorandomly pick a triangle to emit light
-	// index is 0 to ubo.light_tri_count - 1.0
-	int index = int(stepAndOutputRNGFloat(prng_state)*float(ubo.light_tri_count - 1));
+	int index = int(floor(stepAndOutputRNGFloat(prng_state)*float(ubo.light_tri_count - 1)));
 
 	get_triangle_vertices_by_light_index(A, B, C, index);
 
@@ -526,8 +524,8 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 			rayPayload.color.g == 20.0 && 
 			rayPayload.color.b == 20.0)
 		{
-			float local_colour = energy*(rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
-			return local_colour / (mask.r + mask.g + mask.b);
+			float local_colour = (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
+			return local_colour;
 		}
 	}
 	else
@@ -591,8 +589,9 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 
 
 	float ret_colour = 0;
-	float local_colour = energy;
+	float local_colour = 1000.0*energy;
 	float total = 0;
+
 
 	for(int i = 0; i < step_count - 1; i++)
 	{
