@@ -542,11 +542,8 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 		step_locations[step_count] = light_o;
 		step_count++;
 
-		
-
-
-	vec3 o = light_o;
-	vec3 d = light_d;
+		vec3 o = light_o;
+		vec3 d = light_d;
 
 		for(int i = 0; i < max_bounces; i++)
 		{
@@ -591,12 +588,8 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 		end--; 
 	}
 	
-//	if(light_o == step_locations[step_count - 1] && temp_last == step_locations[2])
-//		return 1.0;
-//	else
-//		return 0.0;
 
-	
+
 
 
 
@@ -620,15 +613,6 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 		total += mask.r;
 		total += mask.g;
 		total += mask.b;
-
-		// If this is simply the final step
-		// then don't throw away perfectly 
-		// good data
-		if(i == step_count - 2)
-		{	
-//			ret_colour += local_colour;
-//			break;
-		}
 
 		// If hit a light
 		if(	rayPayload.color.r == 20.0 && 	
