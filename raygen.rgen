@@ -584,11 +584,11 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 	}   
 
    
-	//
-	//	if(light_o == step_locations[step_count - 1] && temp_last == step_locations[2])
-	//		return 1.0;
-	//	else
-	//		return 0.0;
+	
+//		if(light_o == step_locations[step_count - 1] && temp_last == step_locations[2])
+//			return 1.0;
+//		else
+//			return 0.0;
 
 	
 
@@ -620,8 +620,8 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 		// good data
 		if(i == step_count - 2)
 		{	
-			ret_colour += local_colour;
-			break;
+		//	ret_colour += local_colour;
+		//	break;
 		}
 
 		// If hit a light
