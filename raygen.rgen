@@ -322,159 +322,6 @@ vec3 getRandomPointOnTriangle(vec3 A, vec3 B, vec3 C)
 
 
 
-float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, const float eta)
-{
-	vec3 o = vec3(0.0);
-	vec3 d = vec3(0.0);
-
-	Vertex A, B, C;
-
-	// Pseudorandomly pick a triangle to emit light
-	// index is 0 to ubo.light_tri_count - 1.0
-	int index = int(stepAndOutputRNGFloat(prng_state)*(ubo.light_tri_count - 1.0));
-
-	get_triangle_vertices_by_light_index(A, B, C, index);
-
-	// Use backward tracing to test the algorithm
-	o = getRandomPointOnTriangle(A.pos, B.pos, C.pos);
-	d = cosWeightedRandomHemisphereDirection(get_normal_by_light_index(index), prng_state);
-
-	float area = get_area_by_light_index(index);
-
-
-
-
-
-
-
-
-
-	uint step_count = 0;
-	vec3 step_locations[max_bounces + 3];
-
-	step_locations[step_count] = eye;
-	step_count++;
-
-	traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, eye, 0.001, direction, 10000.0, 0);
-
-	if(rayPayload.dist != -1.0)
-	{
-		vec3 hitPos = eye + direction * rayPayload.dist;
-
-		step_locations[step_count] = hitPos;
-		step_count++;
-	}
-	else
-	{
-		return 0.0;
-	}
-
-
-	bool found_path = false;
-
-	for(int i = 0; i < max_bounces; i++)
-	{
-		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, 0.001, d, 10000.0, 0);
-	
-		// If hit the sky
-		if(rayPayload.dist == -1.0)
-			return 0.0;
-
-		vec3 hitPos = o + d * rayPayload.dist;
-
-		step_locations[step_count] = hitPos;
-		step_count++;
-
-		if(true == is_clear_line_of_sight(step_locations[1], hitPos))
-		{
-			found_path = true;
-			break;
-		}
-
-		o = hitPos + rayPayload.normal * 0.01;
-		d = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
-	}
-
-	for (int i = 2; i < step_count; i++)
-		step_locations[i] = step_locations[step_count - 1 - i];
-
-
-
-
-
-
-	const float energy = 1.0;//area;
-
-	float ret_colour = 0;
-	float local_colour = energy;
-	float total = 0;
-
-	const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
-	
-//	o = eye;
-//	d = direction;
-
-	
-		o = step_locations[0];
-		d = step_locations[1] - step_locations[0];
-
-	for(int i = 0; i < (step_count - 1); i++)
-	{
-		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, 0.001, d, 10000.0, 0);
-
-		local_colour *= (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
-		
-		total += mask.r;
-		total += mask.g;
-		total += mask.b;
-
-		if(true == is_clear_line_of_sight(step_locations[1], o))
-		{
-	//		ret_colour += local_colour;
-	//		break;
-		}
-
-		// If this is simply the final step
-		// then don't throw away perfectly 
-		// good data
-		if(i == max_bounces - 1)
-		{
-		//	ret_colour += local_colour;
-		//	break;
-		}
-
-		// If hit a light
-		if(	rayPayload.color.r == 20.0 && 
-			rayPayload.color.g == 20.0 && 
-			rayPayload.color.b == 20.0)
-		{	
-		ret_colour += local_colour;
-			break;
-		}
-
-		ret_colour += local_colour;
-		
-
-	}
-
-
-
-
-	return ret_colour / total;//(mask.r + mask.g + mask.b);
-}
-
-
-float get_radiance_forward(const int samples, const vec3 origin, const vec3 direction, const float hue, const float eta)
-{
-	float ret_colour = 0.0;
-
-	for(int s = 0; s < samples; s++)
-		ret_colour += trace_path_forward(origin, direction, hue, eta);
-
-	return ret_colour / samples;
-}
-
-
 
 
 
@@ -629,6 +476,198 @@ float get_omni_radiance_backward(const int samples, const int steps, const vec3 
 
 	return ret_colour / samples;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, const float eta)
+{
+	//vec3 o = vec3(0.0);
+	//vec3 d = vec3(0.0);
+
+	Vertex A, B, C;
+
+	// Pseudorandomly pick a triangle to emit light
+	// index is 0 to ubo.light_tri_count - 1.0
+	int index = int(stepAndOutputRNGFloat(prng_state)*(ubo.light_tri_count - 1.0));
+
+	get_triangle_vertices_by_light_index(A, B, C, index);
+
+	// Use backward tracing to test the algorithm
+	const vec3 light_o = getRandomPointOnTriangle(A.pos, B.pos, C.pos);
+	const vec3 light_d = cosWeightedRandomHemisphereDirection(get_normal_by_light_index(index), prng_state);
+
+	vec3 o = light_o;
+	vec3 d = light_d;
+
+	
+	
+	
+	float area = get_area_by_light_index(index);
+
+
+
+
+
+
+	uint step_count = 0;
+	vec3 step_locations[max_bounces + 3];
+
+	step_locations[step_count] = eye;
+	step_count++;
+
+	traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, eye, 0.001, direction, 10000.0, 0);
+
+	if(rayPayload.dist != -1.0)
+	{
+		vec3 hitPos = eye + direction * rayPayload.dist;
+
+		step_locations[step_count] = hitPos;
+		step_count++;
+	}
+	else
+	{
+		return 0.0;
+	}
+
+	step_locations[step_count] = light_o; // light position
+	step_count++;
+
+
+
+
+
+	bool found_path = false;
+
+	for(int i = 0; i < max_bounces; i++)
+	{
+		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, 0.001, d, 10000.0, 0);
+	
+		// If hit the sky
+		if(rayPayload.dist == -1.0)
+			return 0.0;
+
+		vec3 hitPos = o + d * rayPayload.dist;
+
+		step_locations[step_count] = hitPos;
+		step_count++;
+			
+		if(true == is_clear_line_of_sight(step_locations[1], hitPos))
+		{
+			found_path = true;
+			break;
+		}
+
+		o = hitPos + rayPayload.normal * 0.01;
+		d = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
+	}
+
+	if(found_path == false)
+		trace_path_backward(max_bounces, eye, direction, hue, eta);
+
+	vec3 temp_last = step_locations[step_count - 1];
+
+	// Reverse the lasrt part of the path
+	uint start = 2;
+	uint end = step_count - 1;
+
+    while(start < end) 
+	{ 
+        vec3 temp = step_locations[start];  
+        step_locations[start] = step_locations[end]; 
+        step_locations[end] = temp; 
+        start++; 
+        end--; 
+   }   
+
+//	if(temp_last == step_locations[2])
+//		return 1.0;
+//	else
+//		return 0.0;
+		
+	
+
+
+
+	const float energy = area;
+
+	float ret_colour = 0;
+	float local_colour = energy;
+	float total = 0;
+
+	const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
+
+	for(int i = 0; i < step_count - 1; i++)
+	{
+		o = step_locations[i];
+		d = step_locations[i + 1] - step_locations[i];
+
+		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, 0.001, d, 10000.0, 0);
+
+		local_colour *= (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
+		
+		total += mask.r;
+		total += mask.g;
+		total += mask.b;
+
+		// If this is simply the final step
+		// then don't throw away perfectly 
+		// good data
+		if(i == step_count - 2)
+		{
+//			ret_colour += local_colour;
+//			break;
+		}
+
+		// If hit a light
+		if(	rayPayload.color.r == 20.0 && 
+			rayPayload.color.g == 20.0 && 
+			rayPayload.color.b == 20.0)
+		{	
+			ret_colour += local_colour;
+			break;
+		}
+
+
+	}
+
+
+
+
+	return ret_colour / total;//(mask.r + mask.g + mask.b);
+}
+
+
+float get_radiance_forward(const int samples, const vec3 origin, const vec3 direction, const float hue, const float eta)
+{
+	float ret_colour = 0.0;
+
+	for(int s = 0; s < samples; s++)
+		ret_colour += trace_path_forward(origin, direction, hue, eta);
+
+	return ret_colour / samples;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 bool in_aabb(vec3 pos, vec3 aabb_min, vec3 aabb_max)
 {
