@@ -503,7 +503,9 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 
 
 
+	
 
+	bool found_path = false;
 
 	uint step_count = 0;
 	vec3 step_locations[max_bounces + 3];
@@ -517,6 +519,13 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 	{
 		vec3 hitPos = eye + direction * rayPayload.dist;
 
+		if(	rayPayload.color.r == 20.0 && 	
+			rayPayload.color.g == 20.0 && 
+			rayPayload.color.b == 20.0)
+		{
+			found_path = true;
+		}
+
 		step_locations[step_count] = hitPos;
 		step_count++;
 	}
@@ -528,27 +537,21 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 
 
 
-
-
-	bool found_path = false;
-	vec3 o = light_o;
-	vec3 d = light_d;
-
-	if(step_locations[step_count - 1] != light_o)
+	if(false == found_path)
 	{
 		step_locations[step_count] = light_o;
 		step_count++;
 
+		
+
+
+	vec3 o = light_o;
+	vec3 d = light_d;
+
 		for(int i = 0; i < max_bounces; i++)
 		{
-			if(true == is_clear_line_of_sight(step_locations[1], step_locations[step_count - 1]))
-			{
-				found_path = true;
-				break;
-			}
-
 			traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, 0.001, d, 10000.0, 0);
-	
+
 			// If hit the sky
 			if(rayPayload.dist == -1.0)
 				return 0.0;
@@ -560,6 +563,13 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 
 			o = hitPos + rayPayload.normal * 0.01;
 			d = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
+
+			if(true == is_clear_line_of_sight(step_locations[1], step_locations[step_count - 1]))
+			{
+				found_path = true;
+				break;
+			}	
+
 		}
 	}
 	
@@ -567,8 +577,6 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 		return trace_path_backward(max_bounces, eye, direction, hue, eta);
 
 
-
-	vec3 temp_last = step_locations[step_count - 1];
 
 	// Reverse the last part of the path
 	uint start = 2;
@@ -581,14 +589,12 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 		step_locations[end] = temp; 
 		start++; 
 		end--; 
-	}   
-
-   
+	}
 	
-//		if(light_o == step_locations[step_count - 1] && temp_last == step_locations[2])
-//			return 1.0;
-//		else
-//			return 0.0;
+//	if(light_o == step_locations[step_count - 1] && temp_last == step_locations[2])
+//		return 1.0;
+//	else
+//		return 0.0;
 
 	
 
@@ -604,10 +610,10 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 
 	for(int i = 0; i < step_count - 1; i++)
 	{
-		o = step_locations[i];
-		d = step_locations[i + 1] - step_locations[i];
+		vec3 step_o = step_locations[i];
+		vec3 step_d = step_locations[i + 1] - step_locations[i];
 
-		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, 0.001, d, 10000.0, 0);
+		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, step_o, 0.001, step_d, 10000.0, 0);
 
 		local_colour *= (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
 		
@@ -620,8 +626,8 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 		// good data
 		if(i == step_count - 2)
 		{	
-		//	ret_colour += local_colour;
-		//	break;
+//			ret_colour += local_colour;
+//			break;
 		}
 
 		// If hit a light
