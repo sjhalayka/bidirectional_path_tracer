@@ -4,8 +4,8 @@
 		"version":"2.0"
 	},
 	"extensionsUsed":[
-		"KHR_materials_transmission",
-		"KHR_materials_specular"
+		"KHR_materials_specular",
+		"KHR_materials_ior"
 	],
 	"scene":0,
 	"scenes":[
@@ -19,17 +19,12 @@
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"CornellBoxExport3",
+			"name":"CornellBoxExport3_small",
 			"rotation":[
-				0.70710688829422,
+				0.7071068286895752,
 				0,
 				0,
-				0.7071066498756409
-			],
-			"scale":[
-				0.02500000037252903,
-				0.02500000409781933,
-				0.02500000409781933
+				0.7071068286895752
 			]
 		}
 	],
@@ -41,32 +36,33 @@
 				1,
 				1
 			],
+			"normalTexture":{
+				"index":0
+			},
 			"extensions":{
-				"KHR_materials_transmission":{
-					"transmissionFactor":1
-				},
 				"KHR_materials_specular":{
-					"specularColorTexture":{
-						"index":0
-					}
+					"specularColorFactor":[
+						2.371357614441398,
+						2.371357614441398,
+						2.371357614441398
+					]
+				},
+				"KHR_materials_ior":{
+					"ior":1.4500000476837158
 				}
 			},
-			"name":"Colors",
-			"normalTexture":{
-				"index":1
-			},
+			"name":"material_0",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
-					"index":2
+					"index":1
 				},
-				"metallicFactor":0,
-				"roughnessFactor":0.8999999761581421
+				"metallicFactor":0
 			}
 		}
 	],
 	"meshes":[
 		{
-			"name":"CornellBoxExport3",
+			"name":"CornellBoxExport3_small",
 			"primitives":[
 				{
 					"attributes":{
@@ -88,18 +84,9 @@
 		{
 			"sampler":0,
 			"source":1
-		},
-		{
-			"sampler":0,
-			"source":2
 		}
 	],
 	"images":[
-		{
-			"mimeType":"image/png",
-			"name":"Image",
-			"uri":"Image.png"
-		},
 		{
 			"mimeType":"image/png",
 			"name":"GlowMapWithReflectionAlpha512",
@@ -115,29 +102,29 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":2272,
+			"count":4424,
 			"max":[
-				53.712074279785156,
-				99.80492401123047,
-				57.28697204589844
+				1.3428020477294922,
+				2.4951229095458984,
+				1.4321739673614502
 			],
 			"min":[
-				-55.78070831298828,
-				-4.314006805419922,
-				-53.39677429199219
+				-1.3945180177688599,
+				-0.10785000026226044,
+				-1.3349189758300781
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":2272,
+			"count":4424,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":2272,
+			"count":4424,
 			"type":"VEC3"
 		},
 		{
@@ -150,26 +137,26 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":27264,
+			"byteLength":53088,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":18176,
-			"byteOffset":27264,
+			"byteLength":35392,
+			"byteOffset":53088,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":27264,
-			"byteOffset":45440,
+			"byteLength":53088,
+			"byteOffset":88480,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":11952,
-			"byteOffset":72704,
+			"byteOffset":141568,
 			"target":34963
 		}
 	],
@@ -181,7 +168,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":84656,
+			"byteLength":153520,
 			"uri":"cornell.bin"
 		}
 	]
