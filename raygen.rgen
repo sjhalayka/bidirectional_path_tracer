@@ -552,16 +552,16 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 		step_locations[step_count] = hitPos;
 		step_count++;
 
-
-
-		o = hitPos + rayPayload.normal * 0.01;
-		d = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
-	
-				if(true == is_clear_line_of_sight(step_locations[1], o))
+				if(true == is_clear_line_of_sight(step_locations[1], step_locations[step_count - 1]))
 		{
 			found_path = true;
 			break;
 		}
+
+		o = hitPos + rayPayload.normal * 0.01;
+		d = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
+	
+
 	}
 
 	
