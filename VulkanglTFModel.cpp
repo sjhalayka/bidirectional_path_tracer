@@ -1310,14 +1310,10 @@ void vkglTF::Model::loadFromFile(
 				}
 			}
 
-
 			for (size_t i = 0; i < temp_indices.size(); i++)
 				light_indices.push_back(temp_indices[i]);
 
 			indexBuffer = light_indices;
-
-			//
-
 		}
 
 
