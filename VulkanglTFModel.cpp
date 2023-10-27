@@ -1316,19 +1316,8 @@ void vkglTF::Model::loadFromFile(
 
 			indexBuffer = light_indices;
 
+			//
 
-
-
-
-			//for (size_t i = 0; i < light_indices.size(); i++)
-			//	temp_indices.push_back(light_indices[i]);
-
-			//indexBuffer = temp_indices;
-
-			//std::ostringstream oss;
-			//oss << num_triangles << " " << num_light_triangles;
-
-			//MessageBox(NULL, oss.str().c_str(), "test", MB_OK);
 		}
 
 
@@ -1399,6 +1388,20 @@ void vkglTF::Model::loadFromFile(
 			metallicRoughnessWorkflow = false;
 		}
 	}
+
+
+
+	//vertexBuffer[0].pos = glm::vec3(1.0, 0.5, 0.0);
+	//vertexBuffer[vertexBuffer.size() - 1].pos = glm::vec3(0.0, 0.5, 1.0);
+
+
+	//std::ostringstream oss;
+	//oss << vertexBuffer[0].pos.x << " " << vertexBuffer[0].pos.y << " " << vertexBuffer[0].pos.z;
+
+	//MessageBox(NULL, oss.str().c_str(), "test", MB_OK);
+
+
+
 
 	size_t vertexBufferSize = vertexBuffer.size() * sizeof(Vertex);
 	size_t indexBufferSize = indexBuffer.size() * sizeof(uint32_t);

@@ -92,7 +92,7 @@ layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
 layout(binding = 1, set = 0, rgba8) uniform image2D color_image;
 layout(binding = 2, set = 0) uniform UBO 
 {
-	mat4 viewInverse;
+	mat4 viewInverse;	
 	mat4 projInverse;
 
 	mat4 transformation_matrix;
@@ -103,6 +103,7 @@ layout(binding = 2, set = 0) uniform UBO
 
 	uint tri_count;
 	uint light_tri_count;
+	uint vertex_count;
 
 } ubo;
 
@@ -124,7 +125,7 @@ struct RayPayload
 };
 
 layout(location = 0) rayPayloadEXT RayPayload rayPayload;
-layout(location = 2) rayPayloadEXT bool shadowed;
+
 
 
 
@@ -287,12 +288,31 @@ float get_area_by_light_index(int index)
 }
 
 
+layout(location = 2) rayPayloadEXT bool shadowed;
+
+
 bool is_clear_line_of_sight(vec3 pos_start, const vec3 pos_end)
 {
 	shadowed = true; // Make sure to set this to the default before tracing the ray!
-	traceRayEXT(topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT, 0xFF, 0, 0, 1, pos_start, 0.001, pos_end, 10000.0, 2);
+	traceRayEXT(topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT, 0xFF, 0, 0, 1, pos_start, 0.001, normalize(pos_end), 10000.0, 2);
 
 	return !shadowed;
+}
+
+bool is_clear_line_of_sight_slow(vec3 pos_start, const vec3 pos_end)
+{
+	RayPayload r = rayPayload;
+
+	traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, pos_start, 0.001, pos_end, 10000.0, 0);
+
+	bool found_hit = false;
+
+	if(rayPayload.dist != -1)
+		found_hit = true;
+
+	rayPayload = r;
+
+	return !found_hit;
 }
 
 
@@ -993,7 +1013,7 @@ float get_ray0(const float hue, const float eta)
 
  
 
-
+	
 
 
 
@@ -1001,6 +1021,19 @@ float get_ray0(const float hue, const float eta)
 
 void main() 
 {
+/*
+	Vertex v0 = unpack(0);
+	Vertex v1 = unpack(ubo.vertex_count - 1);
+
+	vec3 color = v1.pos;
+
+	imageStore(color_image, pixel_pos, vec4(color, 0.0));
+	return;
+	*/
+
+
+
+
 	// Do chromatic aberration (good for making rainbows via prisms)
 
 	const int channels = 7;
@@ -1040,6 +1073,7 @@ void main()
 	//color = pow(color, vec3(2.2));
 
 	imageStore(color_image, pixel_pos, vec4(color, 0.0));
+
 }
 
 

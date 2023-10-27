@@ -33,6 +33,7 @@ layout(binding = 2, set = 0) uniform UBO
 
 	uint tri_count;
 	uint light_tri_count;
+	uint vertex_count;
 } ubo;
 
 layout(binding = 3, set = 0) buffer Vertices { vec4 v[]; } vertices;
