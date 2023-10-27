@@ -555,7 +555,7 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 	step_locations[step_count] = light_o;
 	step_count++;
 
-	if(true == is_clear_line_of_sight(step_locations[1], step_locations[step_count - 1]))
+	if(true == is_clear_line_of_sight(step_locations[1], light_o))
 	{
 		found_path = true;
 	}
