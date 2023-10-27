@@ -543,6 +543,7 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 	}
 	else
 	{
+		// If hit the sky
 		return 0.0;
 	}
 
@@ -554,37 +555,39 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 	step_locations[step_count] = light_o;
 	step_count++;
 
-	vec3 o = light_o;
-	vec3 d = light_d;
-
-	for(int i = 0; i < max_bounces; i++)
+	if(true == is_clear_line_of_sight(step_locations[1], step_locations[step_count - 1]))
 	{
+		found_path = true;
+	}
+	else
+	{
+		vec3 o = light_o;
+		vec3 d = light_d;
 
-
-		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, 0.001, d, 10000.0, 0);
-
-		// If hit the sky
-		if(rayPayload.dist == -1.0)
-			return 0.0;
-
-		vec3 hitPos = o + d * rayPayload.dist;
-
-		step_locations[step_count] = hitPos;
-		step_count++;
-
-				if(true == is_clear_line_of_sight(step_locations[1], step_locations[step_count - 1]))
+		for(int i = 0; i < max_bounces; i++)
 		{
-			found_path = true;
-			break;
+			traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, 0.001, d, 10000.0, 0);
+
+			// If hit the sky
+			if(rayPayload.dist == -1.0)
+				return 0.0;
+
+			vec3 hitPos = o + d * rayPayload.dist;
+
+			step_locations[step_count] = hitPos;
+			step_count++;
+
+			if(true == is_clear_line_of_sight(step_locations[1], step_locations[step_count - 1]))
+			{
+				found_path = true;
+				break;
+			}
+
+			o = hitPos + rayPayload.normal * 0.01;
+			d = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
 		}
-
-		o = hitPos + rayPayload.normal * 0.01;
-		d = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
-	
-
 	}
 
-	
 	if(found_path == false)
 		return trace_path_backward(max_bounces, eye, direction, hue, eta);
 
@@ -602,6 +605,14 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 		start++; 
 		end--; 
 	}
+
+
+
+
+
+
+
+
 
 
 
