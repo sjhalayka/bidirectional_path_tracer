@@ -27,14 +27,21 @@ Obtain the files
 
 6) Extract the model and textures subdirectories and the assorted files to C:/dev/Vulkan-master/assets/
 
+7) Download the GLM library from: https://github.com/g-truc/glm
+
+8) Extract the contents of glm-master/glm subdirectory to C:/dev/Vulkan-master/external/glm
+
 
 Building the executables
 
-7) Open the solution file C:/dev/Vulkan-master/vulkanExamples.sln
+1) Open the solution file C:/dev/Vulkan-master/vulkanExamples.sln
 
-8) Change build setting to Release mode, x64
+2) Change build setting to Release mode, x64
 
-9) Select the Build -> Build Solution menu item (be patient, this takes a long time the first time)
+3) Select the Build -> Build Solution menu item (be patient, this takes a long time the first time)
 
-10) Run an example (e.g. C:/dev/Vulkan-master/bin/Release/raytracingreflections.exe)
+4) Run an example (e.g. C:/dev/Vulkan-master/bin/Release/raytracingreflections.exe)
+
+
+
 
