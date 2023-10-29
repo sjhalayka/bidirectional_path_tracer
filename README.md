@@ -11,7 +11,7 @@ Based off of Sascha Willems' raytracingreflections code.
 
 Model by Rob Rau.
 
-To install Sascha Willems' code, do the following:
+To obtain and compile the demo code:
 
 Obtain the files
 
@@ -27,9 +27,9 @@ Obtain the files
 
 6) Extract the model and textures subdirectories and the assorted files to C:/dev/Vulkan-master/assets/
 
-7) Download the GLM library from: https://github.com/g-truc/glm
+7) Download the OLD GLM library from: https://github.com/g-truc/glm/tree/1ad55c5016339b83b7eec98c31007e0aee57d2bf
 
-8) Extract the contents of glm-master/glm subdirectory to C:/dev/Vulkan-master/external/glm
+8) Extract the contents of glm-1ad55c5016339b83b7eec98c31007e0aee57d2bf/glm subdirectory to C:/dev/Vulkan-master/external/glm
 
 
 Building the executables
@@ -42,6 +42,31 @@ Building the executables
 
 4) Run an example (e.g. C:/dev/Vulkan-master/bin/Release/raytracingreflections.exe)
 
+
+Replacing the source files
+
+1) Copy VulkanglTFModel.cpp and VulkanglTFModel.h to C:/dev/Vulkan-master/base
+
+2) Copy closesthit.rchit, miss.rmiss, raygen.rgen and shadow.rmiss to C:/dev/Vulkan-master/shaders/glsl/raytracingreflections
+
+3) Copy raytracingreflections.cpp to C:/dev/Vulkan-master/examples/raytracingreflections
+
+4) Make directory C:/temp/rob_rau_cornell/gltf/
+
+5) Copy cornell.bin, cornell.gltf, ColorMapWithOpacityAlpha512.png and GlowMapWithReflectionAlpha512.png to C:/temp/rob_rau_cornell/gltf/
+
+6) Delete all projects from the solution, except for ALL_BUILD, base, raytracingreflections and ZERO_CHECK.
+
+7) Rebuild solution
+
+8) Make a batch file rtreflect.bat in C:/dev/Vulkan-master/bin/Release/ with the following contents:
+
+glslc.exe "C:\dev\Vulkan-master\shaders\glsl\raytracingreflections\closesthit.rchit"  --target-env=vulkan1.2 -o "C:\dev\Vulkan-master\shaders\glsl\raytracingreflections\closesthit.rchit.spv" <br>
+glslc.exe "C:\dev\Vulkan-master\shaders\glsl\raytracingreflections\miss.rmiss" --target-env=vulkan1.2 -o "C:\dev\Vulkan-master\shaders\glsl\raytracingreflections\miss.rmiss.spv"<br>
+glslc.exe "C:\dev\Vulkan-master\shaders\glsl\raytracingreflections\raygen.rgen" --target-env=vulkan1.2 -o "C:\dev\Vulkan-master\shaders\glsl\raytracingreflections\raygen.rgen.spv"<br>
+glslc.exe "C:\dev\Vulkan-master\shaders\glsl\raytracingreflections\shadow.rmiss" --target-env=vulkan1.2 -o "C:\dev\Vulkan-master\shaders\glsl\raytracingreflections\shadow.rmiss.spv"<br>
+
+raytracingreflections.exe
 
 
 
