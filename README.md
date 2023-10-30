@@ -1,6 +1,6 @@
 Cornell box done in glTF format, with caustics.
 
-Large-format screenshots (may require a TDR time extension, if your framerate dips below 1 FPS, like on my 3060):
+Large-format screenshots may require a TDR time extension, if your framerate dips below 1 FPS, like on my 3060:
 
 KeyPath : HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\GraphicsDrivers<br>
 KeyValue : TdrDelay<br>
@@ -10,6 +10,8 @@ ValueData : Number of seconds to delay. 2 seconds is the default value.<br>
 Based off of Sascha Willems' raytracingreflections code.
 
 Model by Rob Rau.
+
+![image](https://github.com/sjhalayka/cornell_box_textured/assets/16404554/046527b3-82d5-4034-b701-ff651bb175d4)
 
 To obtain and compile the demo code:
 
@@ -66,6 +68,7 @@ glslc.exe "C:\dev\Vulkan-master\shaders\glsl\raytracingreflections\miss.rmiss" -
 glslc.exe "C:\dev\Vulkan-master\shaders\glsl\raytracingreflections\raygen.rgen" --target-env=vulkan1.2 -o "C:\dev\Vulkan-master\shaders\glsl\raytracingreflections\raygen.rgen.spv"<br>
 glslc.exe "C:\dev\Vulkan-master\shaders\glsl\raytracingreflections\shadow.rmiss" --target-env=vulkan1.2 -o "C:\dev\Vulkan-master\shaders\glsl\raytracingreflections\shadow.rmiss.spv"<br>
 raytracingreflections.exe
+
 
 
 
