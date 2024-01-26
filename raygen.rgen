@@ -79,11 +79,11 @@ vec3 aabb_max = vec3(2.5, 2.5, 2.5);
 
 const float opacity_factor = 0.01;
 
-vec3 fog_colour = vec3(1.0, 0.5, 0.0);
+vec3 fog_colour = vec3(1.0, 1.0, 1.0);
 
 
 
-uint prng_state = 0;
+uint prng_state = res.x * pixel_pos.y + pixel_pos.x;
 
 
 
@@ -133,7 +133,7 @@ layout(location = 0) rayPayloadEXT RayPayload rayPayload;
 // Max. number of recursion is passed via a specialization constant
 layout (constant_id = 0) const int MAX_RECURSION = 0;
 const int buffer_size = 8;
-const int max_bounces = 5;
+const int max_bounces = 25;
 
 
 
@@ -167,10 +167,96 @@ Vertex unpack(uint index)
 	return v;
 }
 
+vec3 hsv2rgb(vec3 color) {
+    // Translates HSV color to RGB color
+    // H: 0.0 - 360.0, S: 0.0 - 100.0, V: 0.0 - 100.0
+    // R, G, B: 0.0 - 1.0
+
+    float hue = color.x*360.0;
+    float saturation = color.y*100.0;
+    float value = color.z*100.0;
+
+    float c = (value/100) * (saturation/100);
+    float x = c * (1 - abs(mod(hue/60, 2) - 1));
+    float m = (value/100) - c;
+
+    float r = 0;
+    float g = 0;
+    float b = 0;
+    
+    if (hue >= 0 && hue < 60) {
+        r = c;
+        g = x;
+        b = 0;
+    } else if (hue >= 60 && hue < 120) {
+        r = x;
+        g = c;
+        b = 0;
+    } else if (hue >= 120 && hue < 180) {
+        r = 0;
+        g = c;
+        b = x;
+    } else if (hue >= 180 && hue < 240) {
+        r = 0;
+        g = x;
+        b = c;
+    } else if (hue >= 240 && hue < 300) {
+        r = x;
+        g = 0;
+        b = c;
+    } else if (hue >= 300 && hue < 360) {
+        r = c;
+        g = 0;
+        b = x;
+    }
+
+    r += m;
+    g += m;
+    b += m;
+
+    return vec3(r, g, b);
+}
+
+vec3 rgb2hsv(vec3 color) {
+    // Translates RGB to HSV
+    // R, G, B: 0.0 - 1.0
+    // H: 0.0 - 360.0, S: 0.0 - 100.0, V: 0.0 - 100.0
+
+    float cmax = max(color.r, max(color.g, color.b));
+    float cmin = min(color.r, min(color.g, color.b));
+    float delta = cmax - cmin;
+
+    float hue = 0;
+    float saturation = 0;
+    float value = 0;
+
+    // Hue calculation
+    if (delta == 0) {
+        hue = 0;
+    } else if (cmax == color.r) {
+        hue = 60 * mod((color.g - color.b)/delta, 6);
+    } else if (cmax == color.g) {
+        hue = 60 * ((color.b - color.r)/delta + 2);
+    } else {
+        hue = 60 * ((color.r - color.b)/delta + 4);
+    }
+
+    // Saturation calculation
+    if (cmax == 0) {
+        saturation = 0;
+    } else {
+        saturation = delta/cmax;
+    }
+
+    // Value
+    value = cmax;
+
+    return vec3(hue/360.0, saturation/100.0, value/100.0);
+}
 
 
 
-
+/*
 vec3 rgb2hsv(vec3 c)
 {
     vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
@@ -188,7 +274,7 @@ vec3 hsv2rgb(vec3 c)
     vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
-
+*/
 
 float stepAndOutputRNGFloat(inout uint rngState)
 {
@@ -357,7 +443,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 	vec3 o = origin;
 	vec3 d = direction;
 
-	const float energy = 1.0;
+	const float energy = 20.0;
 	const float caustic_energy = energy*1.0;
 
 	float ret_colour = 0;
@@ -406,9 +492,9 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 		}
 
 		// If hit a light
-		if(	rayPayload.color.r == 20.0 && 
-			rayPayload.color.g == 20.0 && 
-			rayPayload.color.b == 20.0)
+		if(	rayPayload.color.r == 1.0 && 
+			rayPayload.color.g == 1.0 && 
+			rayPayload.color.b == 1.0)
 		{	
 			ret_colour += local_colour;
 			break;
@@ -498,7 +584,10 @@ float get_omni_radiance_backward(const int samples, const int steps, const vec3 
 
 
 
-float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, const float eta)
+
+
+
+float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue, const float eta)
 {
 	const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
 
@@ -513,88 +602,66 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 
 	float area = get_area_by_light_index(index);
 
-	const float energy = area;
+	const float energy = 1.0;//area;
 
-
-	
-
-	uint step_count = 0;
-	vec3 step_locations[max_bounces + 3];
-
-	step_locations[step_count] = eye;
-	step_count++;
-
-	traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, eye, 0.001, direction, 10000.0, 0);
-
-	if(rayPayload.dist != -1.0)
-	{
-		vec3 hitPos = eye + direction * rayPayload.dist;
-
-		step_locations[step_count] = hitPos;
-		step_count++;
-
-		if(	rayPayload.color.r == 20.0 && 	
-			rayPayload.color.g == 20.0 && 
-			rayPayload.color.b == 20.0)
-		{
-			float local_colour = (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
-			return local_colour;
-		}
-	}
-	else
-	{
-		// If hit the sky
-		return 0.0;
-	}
-
-
-	
 
 	bool found_path = false;
 
+	int step_count = 0;
+	vec3 step_locations[max_bounces + 2];
+	vec3 step_directions[max_bounces + 2];
+
 	step_locations[step_count] = light_o;
+	step_directions[step_count] = light_d;
 	step_count++;
 
-	if(true == is_clear_line_of_sight(step_locations[1], light_o))
+	int i = 0;
+
+	if(true == is_clear_line_of_sight(eye, light_o))
 	{
 		found_path = true;
 	}
 	else
-	{
+	{	
 		vec3 o = light_o;
 		vec3 d = light_d;
 
-		for(int i = 0; i < max_bounces; i++)
+		for( i = 0; i < max_bounces; i++)
 		{
 			traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, 0.001, d, 10000.0, 0);
 
-			// If hit the sky
 			if(rayPayload.dist == -1.0)
 				return 0.0;
 
-			vec3 hitPos = o + d * rayPayload.dist;
+			const vec3 hitPos = o + d * rayPayload.dist;
 
-			step_locations[step_count] = hitPos;
+			o = hitPos + rayPayload.normal * 0.01;
+			d = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
+			
+			step_locations[step_count] = o;
+			step_directions[step_count] = d;
 			step_count++;
 
-			if(true == is_clear_line_of_sight(step_locations[1], step_locations[step_count - 1]))
+			if(true == is_clear_line_of_sight(eye, step_locations[step_count - 1]))
 			{
 				found_path = true;
 				break;
 			}
-
-			o = hitPos + rayPayload.normal * 0.01;
-			d = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
 		}
 	}
 
+	//return float(i)/float(max_bounces);
+
 	if(found_path == false)
-		return trace_path_backward(max_bounces, eye, direction, hue, eta);
+		return 0.1;
 
 
+	step_locations[step_count] = eye;
+	step_directions[step_count] = -direction;
+	step_count++;
 
-	// Reverse the last part of the path
-	uint start = 2;
+	// Reverse the path
+	uint start = 0;
 	uint end = step_count - 1;
 
 	while(start < end) 
@@ -602,17 +669,14 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 		vec3 temp = step_locations[start];  
 		step_locations[start] = step_locations[end]; 
 		step_locations[end] = temp; 
-		start++; 
+
+		temp = step_directions[start];  
+		step_directions[start] = step_directions[end]; 
+		step_directions[end] = temp; 
+
+		start++;
 		end--; 
 	}
-
-
-
-
-
-
-
-
 
 
 
@@ -624,20 +688,17 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 	for(int i = 0; i < step_count - 1; i++)
 	{
 		vec3 step_o = step_locations[i];
-		vec3 step_d = step_locations[i + 1] - step_locations[i];
+		vec3 step_d = -step_directions[i];
 
 		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, step_o, 0.001, step_d, 10000.0, 0);
 
 		local_colour *= (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
-		
+
 		total += mask.r;
 		total += mask.g;
 		total += mask.b;
 
-		// If hit a light
-		if(	rayPayload.color.r == 20.0 && 	
-			rayPayload.color.g == 20.0 && 
-			rayPayload.color.b == 20.0)
+		if(i == step_count - 2)
 		{
 			ret_colour += local_colour;
 			break;
@@ -648,12 +709,14 @@ float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, 
 }
 
 
+
+
 float get_radiance_forward(const int samples, const vec3 origin, const vec3 direction, const float hue, const float eta)
 {
 	float ret_colour = 0.0;
 
 	for(int s = 0; s < samples; s++)
-		ret_colour += trace_path_forward(origin, direction, hue, eta);
+		ret_colour += trace_path_forward2(origin, direction, hue, eta);
 
 	return ret_colour / samples;
 }
@@ -755,9 +818,9 @@ float get_ray0(const float hue, const float eta)
 				used_count++;
 
 //				if(ubo.screenshot_mode)
-//					rays[i].base_color = get_radiance_backward(25, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+//					rays[i].base_color = get_radiance_backward(1000, 25, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 //				else
-//					rays[i].base_color = get_radiance_backward(25, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+//					rays[i].base_color = get_radiance_backward(25, 25, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 
 
 				if(ubo.screenshot_mode)
@@ -842,7 +905,7 @@ float get_ray0(const float hue, const float eta)
 
 							const float trans = 1.0 - clamp(dist_opacity, 0.0, 1.0);
 							dist_color += colour*trans;
-							dist_opacity += 0.1*colour*trans;
+							dist_opacity += 0.005*colour*trans;
 						}
 					}
 
@@ -1043,13 +1106,9 @@ void main()
 	*/
 
 
+	const int channels = 3;
 
-
-	// Do chromatic aberration (good for making rainbows via prisms)
-
-	const int channels = 7;
-
-	const float max_hue = rgb2hsv(vec3(1.0, 0.0, 1.0)).x; // violet
+	const float max_hue = rgb2hsv(vec3(0.0, 0.0, 1.0)).x; // blue
 	const float min_hue = rgb2hsv(vec3(1.0, 0.0, 0.0)).x; // red
 
 	const float max_eta = 0.95;
@@ -1068,7 +1127,7 @@ void main()
 	vec3 color = vec3(0.0);
 
 	// Only seed once per pixel
-	prng_state = res.x * pixel_pos.y + pixel_pos.x;
+	//prng_state = res.x * pixel_pos.y + pixel_pos.x;
 
 	for(int i = 0; i < channels; i++, curr_hue += hue_step_size, curr_eta += eta_step_size)
 	{

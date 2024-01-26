@@ -93,13 +93,19 @@ void main()
 	
 	if(rayPayload.color.r == 1.0 && rayPayload.color.g == 1.0 && rayPayload.color.b == 1.0)
 	{
-		rayPayload.color.r = 20.0;
-		rayPayload.color.g = 20.0;
-		rayPayload.color.b = 20.0;
+		//rayPayload.color.r = 0.75;
+		//rayPayload.color.g = 1.0;
+		//rayPayload.color.b = 0.75;
 
 		//if(ubo.fog_mode)
 			//rayPayload.reflector = 1.0;
 	}
+
+
+
+	//rayPayload.opacity = 1.0;
+	//rayPayload.reflector = 0.0;
+
 
 	// Make the transparent sphere reflective
 	if(rayPayload.opacity == 0.0)
