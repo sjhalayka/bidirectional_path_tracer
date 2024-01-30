@@ -251,6 +251,7 @@ namespace vkglTF
 		glm::vec4 joint0;
 		glm::vec4 weight0;
 		glm::vec4 tangent;
+
 		static VkVertexInputBindingDescription vertexInputBindingDescription;
 		static std::vector<VkVertexInputAttributeDescription> vertexInputAttributeDescriptions;
 		static VkPipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo;

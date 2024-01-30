@@ -630,7 +630,10 @@ public:
 				vertexBuffer,
 				gltfimages,
 				"C:/temp/rob_rau_cornell/gltf/cornell.gltf",
+				//"C:/temp/rob_rau_cornell/simple_building/simple_building.gltf",
 				//"C:/temp/rob_rau_cornell/bunny2/bunny2.gltf",
+				//"C:/temp/rob_rau_cornell/prism3/cornell_prism3.gltf",
+				//"C:/temp/rob_rau_cornell/barrel/barrel.gltf",
 				tri_count,
 				light_tri_count,
 				vulkanDevice,
@@ -815,6 +818,13 @@ public:
 			&accelerationStructureBuildGeometryInfo,
 			&primitive_count,
 			&accelerationStructureBuildSizesInfo);
+
+
+		//ostringstream oss;
+
+		//oss << primitive_count;
+
+		//MessageBox(NULL, oss.str().c_str(), "", MB_OK);
 
 
 		if (do_init)
