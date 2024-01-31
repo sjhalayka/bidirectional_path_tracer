@@ -730,16 +730,19 @@ float get_ray0(const float hue, const float eta)
 
 				traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, rays[i].origin.xyz, tmin, rays[i].direction.xyz, tmax, 0);
 
-				vec4 hitPos = rays[i].origin + rays[i].direction * rayPayload.dist;
-
-
-				
+								
 				// this particular ray missed everything, or got too deep
 				if(rayPayload.dist == -1.0 || rays[i].level >= MAX_RECURSION)
 				{
 					rays[i].in_use = false;
 					continue;
 				}
+
+
+
+				vec4 hitPos = rays[i].origin + rays[i].direction * rayPayload.dist;
+
+
 
 
 				RayPayload r = rayPayload;
@@ -786,7 +789,7 @@ float get_ray0(const float hue, const float eta)
 
 						if(rayPayload.opacity == 0.0) // big hack
 						{
-							start = end;
+							//start = end;
 						}
 					}
 
