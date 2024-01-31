@@ -356,7 +356,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 	vec3 o = origin;
 	vec3 d = direction;
 
-	const float energy = 10.0;
+	const float energy = 20.0;
 	const float caustic_energy = energy*1.0;
 
 	float ret_colour = 0;
@@ -747,7 +747,7 @@ float get_ray0(const float hue, const float eta)
 
 				RayPayload r = rayPayload;
 
-				// Do some experimental fog in an AABB
+				// Do some fog in an AABB
 				float dist_color = 0.0;
 				float dist_opacity = 0.0;
 
@@ -786,11 +786,6 @@ float get_ray0(const float hue, const float eta)
 					
 						if(distance(rays[i].origin.xyz, end) > distance(rays[i].origin.xyz, hitPos.xyz))
 							end = hitPos.xyz + rayPayload.normal * 0.01f;
-
-						if(rayPayload.opacity == 0.0) // big hack
-						{
-							//start = end;
-						}
 					}
 
 					const int num_steps = int(floor((distance(start, end) / target_step_length)));
