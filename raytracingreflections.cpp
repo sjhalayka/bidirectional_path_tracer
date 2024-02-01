@@ -724,10 +724,16 @@ public:
 			&accelerationStructureBuildSizesInfo);
 
 		//if (false == do_init)
-			deleteAccelerationStructure(bottomLevelAS);
+		
+		//deleteAccelerationStructure(bottomLevelAS);
 
-		createAccelerationStructure(bottomLevelAS, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, accelerationStructureBuildSizesInfo);
-
+		if(do_init)
+			createAccelerationStructure(bottomLevelAS, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, accelerationStructureBuildSizesInfo);
+		else
+		{
+//			deleteAccelerationStructure(bottomLevelAS);
+//			createAccelerationStructure(bottomLevelAS, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, accelerationStructureBuildSizesInfo);
+		}
 
 
 		// Create a small scratch buffer used during build of the bottom level acceleration structure
@@ -840,8 +846,13 @@ public:
 		//if (false == do_init)
 		//deleteAccelerationStructure(topLevelAS);
 
-		createAccelerationStructure(topLevelAS, VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR, accelerationStructureBuildSizesInfo);
-
+		if(do_init)
+			createAccelerationStructure(topLevelAS, VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR, accelerationStructureBuildSizesInfo);
+		else
+		{
+//			deleteAccelerationStructure(topLevelAS);
+//			createAccelerationStructure(topLevelAS, VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR, accelerationStructureBuildSizesInfo);
+		}
 		// Create a small scratch buffer used during build of the top level acceleration structure
 		ScratchBuffer scratchBuffer = createScratchBuffer(accelerationStructureBuildSizesInfo.buildScratchSize);
 

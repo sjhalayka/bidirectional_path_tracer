@@ -755,7 +755,7 @@ float get_ray0(const float hue, const float eta)
 				float dist_color = 0.0;
 				float dist_opacity = 0.0;
 
-				if(rays[i].external_reflection_ray || rays[i].external_refraction_ray)
+				if(false)//rays[i].external_reflection_ray || rays[i].external_refraction_ray)
 				{
 					vec3 start = rays[i].origin.xyz;
 					vec3 end = rays[i].origin.xyz;
