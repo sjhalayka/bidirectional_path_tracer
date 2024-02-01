@@ -1194,8 +1194,6 @@ void vkglTF::Model::loadFromFile(
 
 
 
-	std::vector<triangle> tris;
-
 //
 	tinygltf::TinyGLTF gltfContext;
 	if (fileLoadingFlags & FileLoadingFlags::DontLoadImages) {
@@ -1226,6 +1224,13 @@ void vkglTF::Model::loadFromFile(
 	if (read_from_disk)
 	{
 		fileLoaded = gltfContext.LoadASCIIFromFile(&gltfModel, &error, &warning, filename);
+	
+	if(fileLoaded == false)
+	{
+		// TODO: throw
+		vks::tools::exitFatal("Could not load glTF file \"" + filename + "\": " + error, -1);
+		return;
+	}
 	}
 	else
 	{
@@ -1294,84 +1299,84 @@ void vkglTF::Model::loadFromFile(
 			loadNode(nullptr, node, scene.nodes[i], gltfModel, indexBuffer, vertexBuffer, scale);
 		}
 
-		std::vector<uint32_t> light_indices;
-		std::vector<uint32_t> temp_indices;
+		//std::vector<uint32_t> light_indices;
+		//std::vector<uint32_t> temp_indices;
 
 
-		for (size_t image_index = 0; image_index < gltfimages.size(); image_index++)
-		{
-			if (gltfimages[image_index].name != "ColorMapWithOpacityAlpha512")
-				continue;
+		//for (size_t image_index = 0; image_index < gltfimages.size(); image_index++)
+		//{
+		//	if (gltfimages[image_index].name != "ColorMapWithOpacityAlpha512")
+		//		continue;
 
-			for (size_t i = 0; i < indexBuffer.size(); i += 3)
-			{
-				vkglTF::Vertex a = vertexBuffer[indexBuffer[i + 0]];
-				vkglTF::Vertex b = vertexBuffer[indexBuffer[i + 1]];
-				vkglTF::Vertex c = vertexBuffer[indexBuffer[i + 2]];
+		//	for (size_t i = 0; i < indexBuffer.size(); i += 3)
+		//	{
+		//		vkglTF::Vertex a = vertexBuffer[indexBuffer[i + 0]];
+		//		vkglTF::Vertex b = vertexBuffer[indexBuffer[i + 1]];
+		//		vkglTF::Vertex c = vertexBuffer[indexBuffer[i + 2]];
 
-				size_t a_x = a.uv.s * (gltfimages[image_index].width - 1);
-				size_t a_y = a.uv.t * (gltfimages[image_index].height - 1);
-				size_t a_index = 4 * (a_y * gltfimages[image_index].width + a_x);
+		//		size_t a_x = a.uv.s * (gltfimages[image_index].width - 1);
+		//		size_t a_y = a.uv.t * (gltfimages[image_index].height - 1);
+		//		size_t a_index = 4 * (a_y * gltfimages[image_index].width + a_x);
 
-				unsigned char colour_a_0 = gltfimages[image_index].image[a_index + 0];
-				unsigned char colour_a_1 = gltfimages[image_index].image[a_index + 1];
-				unsigned char colour_a_2 = gltfimages[image_index].image[a_index + 2];
-				unsigned char colour_a_3 = gltfimages[image_index].image[a_index + 3];
+		//		unsigned char colour_a_0 = gltfimages[image_index].image[a_index + 0];
+		//		unsigned char colour_a_1 = gltfimages[image_index].image[a_index + 1];
+		//		unsigned char colour_a_2 = gltfimages[image_index].image[a_index + 2];
+		//		unsigned char colour_a_3 = gltfimages[image_index].image[a_index + 3];
 
-				size_t b_x = b.uv.s * (gltfimages[image_index].width - 1);
-				size_t b_y = b.uv.t * (gltfimages[image_index].height - 1);
-				size_t b_index = 4 * (b_y * gltfimages[image_index].width + b_x);
+		//		size_t b_x = b.uv.s * (gltfimages[image_index].width - 1);
+		//		size_t b_y = b.uv.t * (gltfimages[image_index].height - 1);
+		//		size_t b_index = 4 * (b_y * gltfimages[image_index].width + b_x);
 
-				unsigned char colour_b_0 = gltfimages[image_index].image[b_index + 0];
-				unsigned char colour_b_1 = gltfimages[image_index].image[b_index + 1];
-				unsigned char colour_b_2 = gltfimages[image_index].image[b_index + 2];
-				unsigned char colour_b_3 = gltfimages[image_index].image[b_index + 3];
+		//		unsigned char colour_b_0 = gltfimages[image_index].image[b_index + 0];
+		//		unsigned char colour_b_1 = gltfimages[image_index].image[b_index + 1];
+		//		unsigned char colour_b_2 = gltfimages[image_index].image[b_index + 2];
+		//		unsigned char colour_b_3 = gltfimages[image_index].image[b_index + 3];
 
-				size_t c_x = c.uv.s * (gltfimages[image_index].width - 1);
-				size_t c_y = c.uv.t * (gltfimages[image_index].height - 1);
-				size_t c_index = 4 * (c_y * gltfimages[image_index].width + c_x);
+		//		size_t c_x = c.uv.s * (gltfimages[image_index].width - 1);
+		//		size_t c_y = c.uv.t * (gltfimages[image_index].height - 1);
+		//		size_t c_index = 4 * (c_y * gltfimages[image_index].width + c_x);
 
-				unsigned char colour_c_0 = gltfimages[image_index].image[c_index + 0];
-				unsigned char colour_c_1 = gltfimages[image_index].image[c_index + 1];
-				unsigned char colour_c_2 = gltfimages[image_index].image[c_index + 2];
-				unsigned char colour_c_3 = gltfimages[image_index].image[c_index + 3];
+		//		unsigned char colour_c_0 = gltfimages[image_index].image[c_index + 0];
+		//		unsigned char colour_c_1 = gltfimages[image_index].image[c_index + 1];
+		//		unsigned char colour_c_2 = gltfimages[image_index].image[c_index + 2];
+		//		unsigned char colour_c_3 = gltfimages[image_index].image[c_index + 3];
 
 
-				if (colour_a_0 == 255 &&
-					colour_a_1 == 255 &&
-					colour_a_2 == 255 &&
-					colour_a_3 == 255 &&
-					colour_b_0 == 255 &&
-					colour_b_1 == 255 &&
-					colour_b_2 == 255 &&
-					colour_b_3 == 255 &&
-					colour_c_0 == 255 &&
-					colour_c_1 == 255 &&
-					colour_c_2 == 255 &&
-					colour_c_3 == 255)
-				{
-					num_light_triangles++;
-					num_triangles++;
+		//		if (colour_a_0 == 255 &&
+		//			colour_a_1 == 255 &&
+		//			colour_a_2 == 255 &&
+		//			colour_a_3 == 255 &&
+		//			colour_b_0 == 255 &&
+		//			colour_b_1 == 255 &&
+		//			colour_b_2 == 255 &&
+		//			colour_b_3 == 255 &&
+		//			colour_c_0 == 255 &&
+		//			colour_c_1 == 255 &&
+		//			colour_c_2 == 255 &&
+		//			colour_c_3 == 255)
+		//		{
+		//			num_light_triangles++;
+		//			num_triangles++;
 
-					light_indices.push_back(indexBuffer[i + 0]);
-					light_indices.push_back(indexBuffer[i + 1]);
-					light_indices.push_back(indexBuffer[i + 2]);
-				}
-				else
-				{
-					num_triangles++;
+		//			light_indices.push_back(indexBuffer[i + 0]);
+		//			light_indices.push_back(indexBuffer[i + 1]);
+		//			light_indices.push_back(indexBuffer[i + 2]);
+		//		}
+		//		else
+		//		{
+		//			num_triangles++;
 
-					temp_indices.push_back(indexBuffer[i + 0]);
-					temp_indices.push_back(indexBuffer[i + 1]);
-					temp_indices.push_back(indexBuffer[i + 2]);
-				}
-			}
+		//			temp_indices.push_back(indexBuffer[i + 0]);
+		//			temp_indices.push_back(indexBuffer[i + 1]);
+		//			temp_indices.push_back(indexBuffer[i + 2]);
+		//		}
+		//	}
 
-			for (size_t i = 0; i < temp_indices.size(); i++)
-				light_indices.push_back(temp_indices[i]);
+		//	for (size_t i = 0; i < temp_indices.size(); i++)
+		//		light_indices.push_back(temp_indices[i]);
 
-			indexBuffer = light_indices;
-		}
+		//	indexBuffer = light_indices;
+		//}
 
 
 
@@ -1395,11 +1400,7 @@ void vkglTF::Model::loadFromFile(
 			}
 		}
 	}
-	else {
-		// TODO: throw
-		vks::tools::exitFatal("Could not load glTF file \"" + filename + "\": " + error, -1);
-		return;
-	}
+
 
 
 
