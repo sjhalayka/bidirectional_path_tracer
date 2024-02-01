@@ -13,6 +13,8 @@
 
 #include "VulkanglTFModel.h"
 
+#include <sstream>
+using namespace std;
 
 
 
@@ -1174,6 +1176,9 @@ void vkglTF::Model::loadAnimations(tinygltf::Model& gltfModel)
 }
 
 void vkglTF::Model::loadFromFile(
+	tinygltf::Model &gltfModel,
+	clock_t start,
+	bool read_from_disk,
 	std::vector<uint32_t> &indexBuffer, 
 	std::vector<Vertex> &vertexBuffer,
 	std::vector<tinygltf::Image> &gltfimages,
@@ -1181,14 +1186,17 @@ void vkglTF::Model::loadFromFile(
 	size_t &num_triangles,
 	size_t &num_light_triangles, 
 	vks::VulkanDevice* device, VkQueue transferQueue, uint32_t fileLoadingFlags, float scale)
-{
+{	
+
 	indexBuffer.clear();
 	vertexBuffer.clear();
 	gltfimages.clear();
 
+
+
 	std::vector<triangle> tris;
 
-	tinygltf::Model gltfModel;
+//
 	tinygltf::TinyGLTF gltfContext;
 	if (fileLoadingFlags & FileLoadingFlags::DontLoadImages) {
 		gltfContext.SetImageLoader(loadImageDataFuncEmpty, nullptr);
@@ -1213,9 +1221,41 @@ void vkglTF::Model::loadFromFile(
 	// We let tinygltf handle this, by passing the asset manager of our app
 	tinygltf::asset_manager = androidApp->activity->assetManager;
 #endif
-	bool fileLoaded = gltfContext.LoadASCIIFromFile(&gltfModel, &error, &warning, filename);
+	bool fileLoaded = false;
+	
+	if (read_from_disk)
+	{
+		fileLoaded = gltfContext.LoadASCIIFromFile(&gltfModel, &error, &warning, filename);
+	}
+	else
+	{
+		fileLoaded = true;
+
+		const tinygltf::Scene& scene = gltfModel.scenes[gltfModel.defaultScene > -1 ? gltfModel.defaultScene : 0];
+
+		for (size_t i = 0; i < scene.nodes.size(); i++)
+		{
+			tinygltf::Node node = gltfModel.nodes[scene.nodes[i]];
+
+			float duration = (std::clock() - start) / (float)CLOCKS_PER_SEC;
+
+			//ostringstream oss;
+			//oss << duration*0.001;
+			//MessageBox(NULL, oss.str().c_str(), "test", MB_OK);
+			//		 
+			if (i == 0)
+			{
+				node.translation.resize(3);
+				node.translation[0] = -duration;
+			}
+
+			loadNode(nullptr, node, scene.nodes[i], gltfModel, indexBuffer, vertexBuffer, scale);
+		}
+
+		return;
 
 
+	}
 
 	if (fileLoaded)
 	{
@@ -1224,16 +1264,33 @@ void vkglTF::Model::loadFromFile(
 			loadImages(gltfimages, gltfModel, device, transferQueue);
 		}
 
-
-
-
 		loadMaterials(gltfModel);
 		
 		const tinygltf::Scene& scene = gltfModel.scenes[gltfModel.defaultScene > -1 ? gltfModel.defaultScene : 0];
 		
 		for (size_t i = 0; i < scene.nodes.size(); i++) 
 		{
-			const tinygltf::Node node = gltfModel.nodes[scene.nodes[i]];
+
+
+//			MessageBox()
+
+			tinygltf::Node node = gltfModel.nodes[scene.nodes[i]];
+	
+			float duration = (std::clock() - start) / (float)CLOCKS_PER_SEC;
+
+			//ostringstream oss;
+			//oss << duration*0.001;
+			//MessageBox(NULL, oss.str().c_str(), "test", MB_OK);
+			//		 
+			if (i == 0)
+			{
+				node.translation.resize(3);
+				node.translation[0] = -duration;
+			}
+
+
+
+
 			loadNode(nullptr, node, scene.nodes[i], gltfModel, indexBuffer, vertexBuffer, scale);
 		}
 
@@ -1322,6 +1379,7 @@ void vkglTF::Model::loadFromFile(
 		{
 			loadAnimations(gltfModel);
 		}
+
 
 		loadSkins(gltfModel);
 

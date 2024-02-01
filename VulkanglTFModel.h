@@ -331,6 +331,9 @@ namespace vkglTF
 		
 		
 		void loadFromFile(
+			tinygltf::Model &gltfModel,
+			const clock_t start,
+			const bool read_from_disk,
 			std::vector<uint32_t>& indexBuffer,
 			std::vector<Vertex>& vertexBuffer,
 			std::vector<tinygltf::Image>& gltfimages,

@@ -36,8 +36,7 @@ using std::ostringstream;
 size_t tri_count = 0;
 size_t light_tri_count = 0;
 
-
-
+tinygltf::Model model;
 
 
 
@@ -46,8 +45,8 @@ bool taking_screenshot = false;
 class VulkanExample : public VulkanRaytracingSample
 {
 public:
-	AccelerationStructure bottomLevelAS{};
-	AccelerationStructure topLevelAS{};
+	AccelerationStructure bottomLevelAS;
+	AccelerationStructure topLevelAS;
 
 	const float fovy = 45.0f;
 	const float near_plane = 0.01f;
@@ -603,7 +602,7 @@ public:
 	/*
 		Create the bottom level acceleration structure contains the scene's actual geometry (vertices, triangles)
 	*/
-	void createBottomLevelAccelerationStructure(bool do_init = true)
+	void createBottomLevelAccelerationStructure(bool do_init)
 	{
 		// Instead of a simple triangle, we'll be loading a more complex scene for this example
 		// The shaders are accessing the vertex and index buffers of the scene, so the proper usage flag has to be set on the vertex and index buffers for the scene
@@ -617,21 +616,23 @@ public:
 		std::vector<uint32_t> indexBuffer;
 		std::vector<vkglTF::Vertex> vertexBuffer;
 		std::vector<tinygltf::Image> gltfimages;
-
-
-
+		
+		
 
 		// This fractal_500.gltf file can be downloaded from:
 		// https://drive.google.com/file/d/1BJJSC_K8NwaH8kP4tQpxlAmc6h6N3Ii1/view
-		if (do_init)
+		if (true)
 		{
 			scene.loadFromFile(
+				model,
+				start,
+				do_init,
 				indexBuffer,
 				vertexBuffer,
 				gltfimages,
-				"C:/temp/rob_rau_cornell/gltf/cornell.gltf",
+				//"C:/temp/rob_rau_cornell/gltf/cornell.gltf",
 				//"C:/temp/rob_rau_cornell/simple_building/simple_building.gltf",
-				//"C:/temp/rob_rau_cornell/bunny2/bunny2.gltf",
+				"C:/temp/rob_rau_cornell/bunny2/bunny2.gltf",
 				//"C:/temp/rob_rau_cornell/prism3/cornell_prism3.gltf",
 				//"C:/temp/rob_rau_cornell/barrel/barrel.gltf",
 				tri_count,
@@ -722,8 +723,12 @@ public:
 			&numTriangles,
 			&accelerationStructureBuildSizesInfo);
 
-		if (do_init)
-			createAccelerationStructure(bottomLevelAS, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, accelerationStructureBuildSizesInfo);
+		//if (false == do_init)
+			deleteAccelerationStructure(bottomLevelAS);
+
+		createAccelerationStructure(bottomLevelAS, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, accelerationStructureBuildSizesInfo);
+
+
 
 		// Create a small scratch buffer used during build of the bottom level acceleration structure
 		ScratchBuffer scratchBuffer = createScratchBuffer(accelerationStructureBuildSizesInfo.buildScratchSize);
@@ -763,8 +768,10 @@ public:
 	/*
 		The top level acceleration structure contains the scene's object instances
 	*/
-	void createTopLevelAccelerationStructure(bool do_init = true)
+	void createTopLevelAccelerationStructure(bool do_init)
 	{
+
+
 		static const float pi = 4.0f * atanf(1.0f);
 		float duration = (std::clock() - start) / (float)CLOCKS_PER_SEC;
 		float radians = duration * 2.0f * pi * 0.05f;
@@ -827,8 +834,13 @@ public:
 		//MessageBox(NULL, oss.str().c_str(), "", MB_OK);
 
 
-		if (do_init)
-			createAccelerationStructure(topLevelAS, VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR, accelerationStructureBuildSizesInfo);
+
+
+
+		//if (false == do_init)
+		//deleteAccelerationStructure(topLevelAS);
+
+		createAccelerationStructure(topLevelAS, VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR, accelerationStructureBuildSizesInfo);
 
 		// Create a small scratch buffer used during build of the top level acceleration structure
 		ScratchBuffer scratchBuffer = createScratchBuffer(accelerationStructureBuildSizesInfo.buildScratchSize);
@@ -1070,8 +1082,8 @@ public:
 		VulkanRaytracingSample::prepare();
 
 		// Create the acceleration structures used to render the ray traced scene
-		createBottomLevelAccelerationStructure();
-		createTopLevelAccelerationStructure();
+		createBottomLevelAccelerationStructure(true);
+		createTopLevelAccelerationStructure(true);
 
 		createStorageImage(swapChain.colorFormat, { width, height, 1 });
 		createUniformBuffer();
@@ -1105,8 +1117,13 @@ public:
 		// see: https://github.com/KhronosGroup/Vulkan-Samples/tree/main/samples/extensions/raytracing_extended
 		// Note: this causes a bug which locks the app if window becomes non-minimized
 
+
+
 		createBottomLevelAccelerationStructure(false);
 		createTopLevelAccelerationStructure(false);
+
+
+
 
 		draw();
 
