@@ -37,7 +37,9 @@ size_t tri_count = 0;
 size_t light_tri_count = 0;
 
 tinygltf::Model model;
-
+std::vector<uint32_t> indexBuffer;
+std::vector<vkglTF::Vertex> vertexBuffer;
+std::vector<tinygltf::Image> gltfimages;
 
 
 bool taking_screenshot = false;
@@ -613,9 +615,7 @@ public:
 		//scene.loadFromFile(getAssetPath() + "models/reflection_scene.gltf", vulkanDevice, queue, glTFLoadingFlags);
 
 
-		std::vector<uint32_t> indexBuffer;
-		std::vector<vkglTF::Vertex> vertexBuffer;
-		std::vector<tinygltf::Image> gltfimages;
+
 		
 		
 
