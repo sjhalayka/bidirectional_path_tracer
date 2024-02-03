@@ -293,9 +293,17 @@ layout(location = 2) rayPayloadEXT bool shadowed;
 bool is_clear_line_of_sight(vec3 pos_start, const vec3 pos_end)
 {
 	shadowed = true; // Make sure to set this to the default before tracing the ray!
-	traceRayEXT(topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT, 0xFF, 0, 0, 1, pos_start, 0.001, normalize(pos_start - pos_end), 10000.0, 2);
+	traceRayEXT(topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT, 0xFF, 0, 0, 1, pos_start, 0.001, normalize(pos_end - pos_start), 10000.0, 2);
 	
-	return !shadowed;
+	if(rayPayload.dist == -1)
+		return true;
+
+	vec3 hitPos = pos_start + pos_end * rayPayload.dist;
+
+	if(distance(hitPos, pos_end) < 0.001)
+		return true;
+
+	return false;
 }
 
 bool is_clear_line_of_sight_slow(vec3 pos_start, const vec3 pos_end)
@@ -526,6 +534,8 @@ float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue,
 	step_directions[step_count] = light_d;
 	step_count++;
 
+
+
 	if(false == is_clear_line_of_sight(eye, light_o))
 	{	
 		vec3 o = light_o;
@@ -535,8 +545,17 @@ float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue,
 		{
 			traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, 0.001, d, 10000.0, 0);
 
-			if(rayPayload.dist == -1)
-				return (0.0*mask.r + 0.5*mask.g + 1.0*mask.b);
+			int count = 0;
+
+			while(rayPayload.dist == -1)
+			{
+				d = cosWeightedRandomHemisphereDirection(d, prng_state);
+
+				count++;
+
+				if(count > 30)
+					return (0.0*mask.r + 0.5*mask.g + 1.0*mask.b);
+			}
 
 			const vec3 hitPos = o + d * rayPayload.dist;
 
@@ -553,7 +572,7 @@ float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue,
 	}
 
 	step_locations[step_count] = eye;
-	step_directions[step_count] = direction;
+	step_directions[step_count] = direction;//cosWeightedRandomHemisphereDirection(direction, prng_state);
 	step_count++;
 
 	
@@ -734,10 +753,10 @@ float get_ray0(const float hue, const float eta)
 					rays[i].base_color = get_radiance_backward(25, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 
 
-	//			if(ubo.screenshot_mode)
-	//				rays[i].base_color = get_radiance_forward(25, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
-	//			else
-	//				rays[i].base_color = get_radiance_forward(25, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+		//		if(ubo.screenshot_mode)
+		//			rays[i].base_color = get_radiance_forward(25, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+		//		else
+		//			rays[i].base_color = get_radiance_forward(25, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 
 
 				traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, rays[i].origin.xyz, tmin, rays[i].direction.xyz, tmax, 0);
@@ -755,7 +774,7 @@ float get_ray0(const float hue, const float eta)
 				float dist_color = 0.0;
 				float dist_opacity = 0.0;
 
-				if(false)//rays[i].external_reflection_ray || rays[i].external_refraction_ray)
+				if(rays[i].external_reflection_ray || rays[i].external_refraction_ray)
 				{
 					vec3 start = rays[i].origin.xyz;
 					vec3 end = rays[i].origin.xyz;
