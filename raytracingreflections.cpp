@@ -489,10 +489,10 @@ public:
 		oidn::BufferRef colorBuf = dev.newBuffer(px * py * 3 * sizeof(float));
 		colorBuf.write(0, px* py * 3 * sizeof(float), &float_data[0]);
 
-		oidn::FilterRef filter = dev.newFilter("RT"); // generic ray tracing filter
+		oidn::FilterRef filter = dev.newFilter("RT");
 		
-		filter.setImage("color",  colorBuf, oidn::Format::Float3, px, py); // beauty
-		filter.setImage("output", colorBuf, oidn::Format::Float3, px, py); // denoised beauty
+		filter.setImage("color",  colorBuf, oidn::Format::Float3, px, py);
+		filter.setImage("output", colorBuf, oidn::Format::Float3, px, py);
 		filter.set("hdr", false);
 		filter.commit();
 		filter.execute();
