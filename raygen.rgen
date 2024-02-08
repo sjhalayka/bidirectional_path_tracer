@@ -104,6 +104,8 @@ layout(binding = 2, set = 0) uniform UBO
 	uint tri_count;
 	uint light_tri_count;
 
+	bool do_normals;
+
 } ubo;
 
 layout(binding = 3, set = 0) buffer Vertices { vec4 v[]; } vertices;
@@ -290,11 +292,13 @@ float get_area_by_light_index(uint index)
 layout(location = 2) rayPayloadEXT bool shadowed;
 
 
-bool is_clear_line_of_sight(vec3 pos_start, const vec3 pos_end)
+bool is_clear_line_of_sight_experimental(vec3 pos_start, const vec3 pos_end)
 {
 	shadowed = true; // Make sure to set this to the default before tracing the ray!
-	traceRayEXT(topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT, 0xFF, 0, 0, 1, pos_start, 0.001, normalize(pos_end - pos_start), 10000.0, 2);
+//	traceRayEXT(topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT, 0xFF, 0, 0, 1, pos_start, 0.001, normalize(pos_end - pos_start), 10000.0, 2);
+	traceRayEXT(topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT, 0xFF, 0, 0, 1, pos_start, 0.001, normalize(pos_end), 10000.0, 2);
 	
+	/*
 	if(rayPayload.dist == -1)
 		return true;
 
@@ -302,26 +306,35 @@ bool is_clear_line_of_sight(vec3 pos_start, const vec3 pos_end)
 
 	if(distance(hitPos, pos_end) < 0.001)
 		return true;
+*/
 
-	return false;
+	return !shadowed;
 }
 
-bool is_clear_line_of_sight_slow(vec3 pos_start, const vec3 pos_end)
+
+bool is_clear_line_of_sight(vec3 pos_start, const vec3 pos_end)
 {
 	RayPayload r = rayPayload;
 
-	traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, pos_start, 0.001, pos_end, 10000.0, 0);
+	traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, pos_start, 0.001, normalize(pos_end), 10000.0, 0);
 
-	bool found_hit = false;
+	if(rayPayload.dist == -1)
+	{
+		rayPayload = r;
+		return true;
+	}
 
-	if(rayPayload.dist != -1)
-		found_hit = true;
+	vec3 hitPos = pos_start + pos_end * rayPayload.dist;
+
+	if(distance(hitPos, pos_end) < 0.0001)
+	{
+		rayPayload = r;
+		return true;
+	}
 
 	rayPayload = r;
-
-	return !found_hit;
+	return false;
 }
-
 
 
 // https://stackoverflow.com/questions/19654251/random-point-inside-triangle-inside-java
@@ -547,15 +560,9 @@ float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue,
 
 			int count = 0;
 
-			while(rayPayload.dist == -1)
-			{
-				d = cosWeightedRandomHemisphereDirection(d, prng_state);
-
-				count++;
-
-				if(count > 30)
-					return (0.0*mask.r + 0.5*mask.g + 1.0*mask.b);
-			}
+			if(rayPayload.dist == -1)
+				//get_radiance_backward(25, 5, o, d, hue, eta);//
+				return 0.0;//(0.0*mask.r + 0.5*mask.g + 1.0*mask.b);
 
 			const vec3 hitPos = o + d * rayPayload.dist;
 
@@ -572,7 +579,7 @@ float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue,
 	}
 
 	step_locations[step_count] = eye;
-	step_directions[step_count] = direction;//cosWeightedRandomHemisphereDirection(direction, prng_state);
+	step_directions[step_count] = direction;
 	step_count++;
 
 	
@@ -616,7 +623,7 @@ float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue,
 		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, step_o, 0.001, step_d, 10000.0, 0);
 
 		if(rayPayload.dist == -1)
-			return (1.0*mask.r + 0.5*mask.g + 0.0*mask.b);
+			return 0.0;//(1.0*mask.r + 0.5*mask.g + 0.0*mask.b);
 
 		local_colour *= (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
 
@@ -693,7 +700,7 @@ bool BBoxIntersect(const vec3 boxMin, const vec3 boxMax, const vec3 origin, cons
 }
 
 
-float get_ray0(const float hue, const float eta)
+float get_ray0(inout vec3 out_normal, const float hue, const float eta)
 {
 	// This algorithm stops when the buffer runs out of space,
 	// or when the rays miss everything,
@@ -725,6 +732,7 @@ float get_ray0(const float hue, const float eta)
 		rays[i].parent_id = -1;
 		rays[i].external_reflection_ray = false;
 		rays[i].external_refraction_ray = false;
+		rays[i].normal = vec3(0, 0, 0);
 	}
 
 	rays[0].direction = direction;
@@ -748,7 +756,7 @@ float get_ray0(const float hue, const float eta)
 				used_count++;
 
 				if(ubo.screenshot_mode)
-					rays[i].base_color = get_radiance_backward(1000, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+					rays[i].base_color = get_radiance_backward(25, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 				else
 					rays[i].base_color = get_radiance_backward(25, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 
@@ -774,7 +782,7 @@ float get_ray0(const float hue, const float eta)
 				float dist_color = 0.0;
 				float dist_opacity = 0.0;
 
-				if(rays[i].external_reflection_ray || rays[i].external_refraction_ray)
+				if(false)//rays[i].external_reflection_ray || rays[i].external_refraction_ray)
 				{
 					vec3 start = rays[i].origin.xyz;
 					vec3 end = rays[i].origin.xyz;
@@ -993,15 +1001,10 @@ float get_ray0(const float hue, const float eta)
 	//return s;
 
 
-
-	// Return root ray segment colour
+	out_normal = rays[0].normal;
 	return rays[0].accumulated_color;
 }
 
-
- 
-
-	
 
 
 
@@ -1009,20 +1012,8 @@ float get_ray0(const float hue, const float eta)
 
 void main() 
 {
-/*
-	Vertex v0 = unpack(0);
-	Vertex v1 = unpack(ubo.vertex_count - 1);
-
-	vec3 color = v1.pos;
-
-	imageStore(color_image, pixel_pos, vec4(color, 0.0));
-	return;
-	*/
-
-
-
-
 	// Do chromatic aberration (good for making rainbows via prisms)
+
 
 	const int channels = 3;
 
@@ -1047,11 +1038,16 @@ void main()
 	// Only seed once per pixel
 	prng_state = res.x * pixel_pos.y + pixel_pos.x;
 
+	vec3 normal = vec3(0.0, 0.0, 0.0);
+
 	for(int i = 0; i < channels; i++, curr_hue += hue_step_size, curr_eta += eta_step_size)
 	{
-		const float f = get_ray0(curr_hue, curr_eta);
+		const float f = get_ray0(normal, curr_hue, curr_eta);
+		
+		if(ubo.do_normals == true)
+			break;
+		
 		const vec3 mask = hsv2rgb(vec3(curr_hue, 1.0, 1.0));
-
 		total += mask;
 		color += f*mask;
 	}
@@ -1060,8 +1056,11 @@ void main()
 
 	//color = pow(color, vec3(2.2));
 
-	imageStore(color_image, pixel_pos, vec4(color, 0.0));
 
+	if(true == ubo.do_normals)
+	imageStore(color_image, pixel_pos, vec4(normal, 0.0));
+	else
+	imageStore(color_image, pixel_pos, vec4(color, 0.0));
 }
 
 

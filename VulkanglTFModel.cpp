@@ -1187,6 +1187,9 @@ void vkglTF::Model::loadFromFile(
 	size_t &num_light_triangles, 
 	vks::VulkanDevice* device, VkQueue transferQueue, uint32_t fileLoadingFlags, float scale)
 {
+	num_triangles = 0;
+	num_light_triangles = 0;
+
 	this->device = device;
 
 	indexBuffer.clear();
@@ -1259,8 +1262,14 @@ void vkglTF::Model::loadFromFile(
 
 		if (i == 0)
 		{
-			node.translation.resize(3);
-			node.translation[0] = -duration;
+			//node.translation.resize(3);
+			//node.translation[0] = -duration;
+		
+	//		ostringstream oss;
+	//		oss << node.rotation[0] << " " << node.rotation[1] << " " << node.rotation[2] << " " << node.rotation[3];
+	//		MessageBox(NULL, oss.str().c_str(), "test", MB_OK);
+
+
 		}
 
 		loadNode(nullptr, node, scene.nodes[i], gltfModel, indexBuffer, vertexBuffer, scale);
@@ -1405,9 +1414,17 @@ void vkglTF::Model::loadFromFile(
 
 
 	// The buffers aren't being updated because it fails for the second and
-	// subsequent frames :(
+	// subsequent frames. help?
 	if (false == read_from_disk)
+	{
 		return;
+		/*
+		vkDestroyBuffer(device->logicalDevice, vertices.buffer, nullptr);
+		vkFreeMemory(device->logicalDevice, vertices.memory, nullptr);
+		vkDestroyBuffer(device->logicalDevice, indices.buffer, nullptr);
+		vkFreeMemory(device->logicalDevice, indices.memory, nullptr);*/
+		
+	}
 
 
 
@@ -1444,6 +1461,7 @@ void vkglTF::Model::loadFromFile(
 		&indexStaging.memory,
 		indexBuffer.data()));
 
+
 	// Create device local buffers
 	// Vertex buffer
 	VK_CHECK_RESULT(device->createBuffer(
@@ -1477,6 +1495,7 @@ void vkglTF::Model::loadFromFile(
 	vkFreeMemory(device->logicalDevice, vertexStaging.memory, nullptr);
 	vkDestroyBuffer(device->logicalDevice, indexStaging.buffer, nullptr);
 	vkFreeMemory(device->logicalDevice, indexStaging.memory, nullptr);
+
 
 	getSceneDimensions();
 
@@ -1553,6 +1572,9 @@ void vkglTF::Model::loadFromFile(
 			}
 		}
 	}
+
+
+
 }
 
 void vkglTF::Model::bindBuffers(VkCommandBuffer commandBuffer)

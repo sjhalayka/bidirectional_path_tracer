@@ -7,6 +7,8 @@ using std::vector;
 #include <set>
 using std::set;
 
+#include <string>
+using std::string;
 
 #include <fstream>
 using std::ofstream;
@@ -25,7 +27,8 @@ using std::ostringstream;
 #include <stb_image_write.h>
 
 
-
+#include <OpenImageDenoise/oidn.hpp>
+#pragma comment(lib, "OpenImageDenoise")
 
 
 // https://manual.notch.one/0.9.23/en/docs/faq/extending-gpu-timeout-detection/
@@ -35,6 +38,8 @@ using std::ostringstream;
 
 size_t tri_count = 0;
 size_t light_tri_count = 0;
+
+bool do_normals = false;
 
 tinygltf::Model model;
 std::vector<uint32_t> indexBuffer;
@@ -64,7 +69,7 @@ public:
 		{
 			paused = true;
 			taking_screenshot = true;
-			screenshot(4, "v_rt_reflect.png");
+			screenshot(1, "v_rt_reflect.png");
 			taking_screenshot = false;
 			paused = false;
 
@@ -296,6 +301,16 @@ public:
 		vkUpdateDescriptorSets(device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, VK_NULL_HANDLE);
 	}
 
+
+
+
+
+
+
+
+
+
+
 	void screenshot(size_t num_cams_wide, const char* filename)
 	{
 		const unsigned long int size_x = width;
@@ -321,16 +336,15 @@ public:
 
 		VK_CHECK_RESULT(screenshotStagingBuffer.map());
 
-
+		do_normals = false;
+		updateUniformBuffers();
 
 		unsigned short int px = size_x * static_cast<unsigned short>(num_cams_wide);
 		unsigned short int py = size_y * static_cast<unsigned short>(num_cams_wide);
 
-		size_t num_bytes = 4 * px * py;
-		vector<unsigned char> pixel_data(num_bytes);
-		vector<unsigned char> fbpixels(4 * size_x * size_y);
+		vector<unsigned char> pixel_data(4*px*py);
 
-		const size_t total_cams = num_cams_wide * num_cams_wide;
+		vector<unsigned char> fbpixels(4 * size_x * size_y);
 
 		// Loop through subcameras
 		// We break the screenshot up into pieces like this, so that we don't
@@ -353,8 +367,9 @@ public:
 				const float top = -h + (cam_num_y + 1) * cam_height;
 
 				camera.matrices.perspective = glm::frustum(left, right, bottom, top, near_plane, far_plane);
+				
 				updateUniformBuffers();
-
+					
 				// Prepare & flush command buffer
 				{
 					VkCommandBuffer screenshotCmdBuffer = vulkanDevice->createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
@@ -421,9 +436,9 @@ public:
 
 					memcpy(&fbpixels[0], screenshotStagingBuffer.mapped, size);
 
-					for (GLint i = 0; i < size_x; i++)
+					for (size_t i = 0; i < size_x; i++)
 					{
-						for (GLint j = 0; j < size_y; j++)
+						for (size_t j = 0; j < size_y; j++)
 						{
 							size_t fb_index = 4 * (j * size_x + i);
 
@@ -434,14 +449,92 @@ public:
 							pixel_data[screenshot_index + 0] = fbpixels[fb_index + 0];
 							pixel_data[screenshot_index + 1] = fbpixels[fb_index + 1];
 							pixel_data[screenshot_index + 2] = fbpixels[fb_index + 2];
-							pixel_data[screenshot_index + 3] = 255;
+							pixel_data[screenshot_index + 3] = 255;	
 						}
 					}
 				}
 			}
 		}
 
-		int result = stbi_write_png(filename, px, py, 4, &pixel_data[0], 0);
+		vector<float> float_data(3 * px * py);
+
+		for (size_t i = 0; i < px; i++)
+		{
+			for (size_t j = 0; j < py; j++)
+			{
+				size_t float_index = 3 * (j * px + i);
+				size_t index = 4 * (j * px + i);
+
+				float_data[float_index + 0] = static_cast<float>(pixel_data[index + 0]) / 255.0f;
+				float_data[float_index + 1] = static_cast<float>(pixel_data[index + 1]) / 255.0f;
+				float_data[float_index + 2] = static_cast<float>(pixel_data[index + 2]) / 255.0f;
+			}
+		}
+
+
+
+		//ofstream out("test.pfm", std::ios_base::binary);
+		//ostringstream oss;
+		//oss << "PF" << '\n' << px << ' ' << py << '\n' << "-1.0" << '\n';
+		//out.write(reinterpret_cast<const char*>(oss.str().c_str()), oss.str().size());
+		//out.write(reinterpret_cast<const char*>(&float_data[0]), float_data.size()*sizeof(float));
+		//out.close();
+
+
+
+
+		oidn::DeviceRef dev = oidn::newDevice();
+		dev.commit();
+
+		oidn::BufferRef colorBuf = dev.newBuffer(px * py * 3 * sizeof(float));
+		colorBuf.write(0, px* py * 3 * sizeof(float), &float_data[0]);
+
+		oidn::FilterRef filter = dev.newFilter("RT"); // generic ray tracing filter
+		
+		filter.setImage("color",  colorBuf, oidn::Format::Float3, px, py); // beauty
+		filter.setImage("output", colorBuf, oidn::Format::Float3, px, py); // denoised beauty
+		filter.set("hdr", false);
+		filter.commit();
+		filter.execute();
+
+		// Check for errors
+		const char* errorMessage;
+		if (dev.getError(errorMessage) != oidn::Error::None)
+			MessageBox(NULL, errorMessage, "Error", MB_OK);
+
+		colorBuf.read(0, px * py * 3 * sizeof(float), &float_data[0]);
+
+		
+
+		vector <unsigned char> uc_output_data(4 * px * py, 0);
+
+		for (size_t i = 0; i < px; i++)
+		{
+			for (size_t j = 0; j < py; j++)
+			{
+				size_t uc_index = 4 * (j * px + i);
+				size_t data_index = 3 * (j * px + i);
+
+				uc_output_data[uc_index + 0] = static_cast<unsigned char>(fabsf(float_data[data_index + 0]) * 255.0f);
+				uc_output_data[uc_index + 1] = static_cast<unsigned char>(fabsf(float_data[data_index + 1]) * 255.0f);
+				uc_output_data[uc_index + 2] = static_cast<unsigned char>(fabsf(float_data[data_index + 2]) * 255.0f);
+				uc_output_data[uc_index + 3] = 255;
+			}
+		}
+
+
+
+
+
+		int result = stbi_write_png(filename, px, py, 4, &uc_output_data[0], 0);
+
+
+
+
+
+
+
+
 
 
 		camera.matrices.perspective = cam_mat;
@@ -456,6 +549,8 @@ public:
 		// Delete screenshot descriptor pool
 		vkDestroyDescriptorPool(device, screenshotDescriptorPool, nullptr);
 	}
+
+
 
 
 
@@ -549,7 +644,7 @@ public:
 		glm::mat4 viewInverse;
 		glm::mat4 projInverse;
 		glm::mat4 transformation_matrix;
-
+		
 		glm::vec3 camera_pos;
 
 		int32_t vertexSize;
@@ -558,6 +653,8 @@ public:
 
 		uint32_t tri_count;
 		uint32_t light_tri_count;
+		
+		bool do_normals = false;
 
 	} uniformData;
 	vks::Buffer ubo;
@@ -630,9 +727,9 @@ public:
 				indexBuffer,
 				vertexBuffer,
 				gltfimages,
-				//"C:/temp/rob_rau_cornell/gltf/cornell.gltf",
+				"C:/temp/rob_rau_cornell/gltf/cornell.gltf",
 				//"C:/temp/rob_rau_cornell/simple_building/simple_building.gltf",
-				"C:/temp/rob_rau_cornell/bunny2/bunny2.gltf",
+				//"C:/temp/rob_rau_cornell/bunny2/bunny2.gltf",
 				//"C:/temp/rob_rau_cornell/prism3/cornell_prism3.gltf",
 				//"C:/temp/rob_rau_cornell/barrel/barrel.gltf",
 				tri_count,
@@ -1067,6 +1164,8 @@ public:
 
 		uniformData.tri_count = tri_count;
 		uniformData.light_tri_count = light_tri_count;
+
+		uniformData.do_normals = do_normals;
 
 		memcpy(ubo.mapped, &uniformData, sizeof(uniformData));
 	}
