@@ -33,6 +33,8 @@ Obtain the files
 
 8) Extract the contents of glm-1ad55c5016339b83b7eec98c31007e0aee57d2bf/glm subdirectory to C:/dev/Vulkan-master/external/glm
 
+9) Download and install the Intel Open Image Denoise library.
+
 
 Building the executables
 
