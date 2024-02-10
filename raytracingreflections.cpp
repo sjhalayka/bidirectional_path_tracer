@@ -1116,16 +1116,16 @@ public:
 
 
 
-			{
+	
 
 
-				VkImageCopy copyRegion2{};
-				copyRegion2.srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
-				copyRegion2.srcOffset = { 0, 0, 0 };
-				copyRegion2.dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
-				copyRegion2.dstOffset = { 0, 0, 0 };
-				copyRegion2.extent = { width, height, 1 };
-				vkCmdCopyImage(drawCmdBuffers[i], storageImage.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, swapChain.images[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion2);
+				VkImageCopy copyRegion{};
+				copyRegion.srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+				copyRegion.srcOffset = { 0, 0, 0 };
+				copyRegion.dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+				copyRegion.dstOffset = { 0, 0, 0 };
+				copyRegion.extent = { width, height, 1 };
+				vkCmdCopyImage(drawCmdBuffers[i], storageImage.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, swapChain.images[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
 
 				// Transition swap chain image back for presentation
 				vks::tools::setImageLayout(
@@ -1142,7 +1142,6 @@ public:
 					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 					VK_IMAGE_LAYOUT_GENERAL,
 					subresourceRange);
-			}
 
 
 			drawUI(drawCmdBuffers[i], frameBuffers[i]);
