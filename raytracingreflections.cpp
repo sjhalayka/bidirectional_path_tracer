@@ -1089,6 +1089,7 @@ public:
 				height,
 				1);
 
+
 			/*
 				Copy ray tracing output to swap chain image
 			*/
@@ -1113,29 +1114,35 @@ public:
 
 
 
-			VkImageCopy copyRegion{};
-			copyRegion.srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
-			copyRegion.srcOffset = { 0, 0, 0 };
-			copyRegion.dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
-			copyRegion.dstOffset = { 0, 0, 0 };
-			copyRegion.extent = { width, height, 1 };
-			vkCmdCopyImage(drawCmdBuffers[i], storageImage.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, swapChain.images[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
 
-			// Transition swap chain image back for presentation
-			vks::tools::setImageLayout(
-				drawCmdBuffers[i],
-				swapChain.images[i],
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-				subresourceRange);
 
-			// Transition ray tracing output image back to general layout
-			vks::tools::setImageLayout(
-				drawCmdBuffers[i],
-				storageImage.image,
-				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				VK_IMAGE_LAYOUT_GENERAL,
-				subresourceRange);
+			{
+
+
+				VkImageCopy copyRegion2{};
+				copyRegion2.srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+				copyRegion2.srcOffset = { 0, 0, 0 };
+				copyRegion2.dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+				copyRegion2.dstOffset = { 0, 0, 0 };
+				copyRegion2.extent = { width, height, 1 };
+				vkCmdCopyImage(drawCmdBuffers[i], storageImage.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, swapChain.images[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion2);
+
+				// Transition swap chain image back for presentation
+				vks::tools::setImageLayout(
+					drawCmdBuffers[i],
+					swapChain.images[i],
+					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+					subresourceRange);
+
+				// Transition ray tracing output image back to general layout
+				vks::tools::setImageLayout(
+					drawCmdBuffers[i],
+					storageImage.image,
+					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					VK_IMAGE_LAYOUT_GENERAL,
+					subresourceRange);
+			}
 
 
 			drawUI(drawCmdBuffers[i], frameBuffers[i]);
