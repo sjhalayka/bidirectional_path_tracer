@@ -69,7 +69,7 @@ public:
 		{
 			paused = true;
 			taking_screenshot = true;
-			screenshot(1, "v_rt_reflect.png");
+			screenshot(4, "v_rt_reflect.png");
 			taking_screenshot = false;
 			paused = false;
 
@@ -415,6 +415,7 @@ public:
 					copyRegion.imageExtent.depth = 1;
 
 					vkCmdCopyImageToBuffer(screenshotCmdBuffer, screenshotStorageImage.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, screenshotStagingBuffer.buffer, 1, &copyRegion);
+
 
 					VkBufferMemoryBarrier barrier = {};
 					barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
