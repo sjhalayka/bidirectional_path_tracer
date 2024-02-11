@@ -46,8 +46,9 @@ std::vector<uint32_t> indexBuffer;
 std::vector<vkglTF::Vertex> vertexBuffer;
 std::vector<tinygltf::Image> gltfimages;
 
-
+VkCommandBuffer screenshotCmdBuffer = {};
 bool taking_screenshot = false;
+
 
 class VulkanExample : public VulkanRaytracingSample
 {
@@ -313,19 +314,32 @@ public:
 
 	void screenshot(size_t num_cams_wide, const char* filename)
 	{
+		if(num_cams_wide == 0)
+			return;
+
 		const unsigned long int size_x = width;
 		const unsigned long int size_y = height;
 
+		vks::Buffer screenshotStagingBuffer;
+
 		const glm::mat4x4 cam_mat = camera.matrices.perspective;
 
-		VkDeviceSize size = size_x * size_y * 4; // 4 bytes per pixel
+		VkDeviceSize size = size_x * size_y * 4 * sizeof(unsigned char); // 4 bytes per pixel
 
 		// Create screenshot image
-		createScreenshotStorageImage(VK_FORMAT_R8G8B8A8_UNORM, { size_x, size_y, 1 });
+
+		deleteScreenshotStorageImage();
+
+		if(num_cams_wide == 1) // Strange
+			createScreenshotStorageImage(VK_FORMAT_B8G8R8A8_UNORM, { size_x, size_y, 1 });
+		else
+			createScreenshotStorageImage(VK_FORMAT_R8G8B8A8_UNORM, { size_x, size_y, 1 });
 
 		// Create screenshot descriptor set
 		createScreenshotDescriptorSet();
 
+		//// Delete staging buffer
+		screenshotStagingBuffer.destroy();
 		// Create staging buffer
 		VK_CHECK_RESULT(vulkanDevice->createBuffer(
 			VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -342,7 +356,7 @@ public:
 		unsigned short int px = size_x * static_cast<unsigned short>(num_cams_wide);
 		unsigned short int py = size_y * static_cast<unsigned short>(num_cams_wide);
 
-		vector<unsigned char> pixel_data(4*px*py);
+		vector<unsigned char> pixel_data(4 * px * py);
 
 		vector<unsigned char> fbpixels(4 * size_x * size_y);
 
@@ -367,12 +381,12 @@ public:
 				const float top = -h + (cam_num_y + 1) * cam_height;
 
 				camera.matrices.perspective = glm::frustum(left, right, bottom, top, near_plane, far_plane);
-				
+
 				updateUniformBuffers();
-					
+
 				// Prepare & flush command buffer
 				{
-					VkCommandBuffer screenshotCmdBuffer = vulkanDevice->createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+					screenshotCmdBuffer = vulkanDevice->createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
 					VkImageSubresourceRange subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 
@@ -450,7 +464,7 @@ public:
 							pixel_data[screenshot_index + 0] = fbpixels[fb_index + 0];
 							pixel_data[screenshot_index + 1] = fbpixels[fb_index + 1];
 							pixel_data[screenshot_index + 2] = fbpixels[fb_index + 2];
-							pixel_data[screenshot_index + 3] = 255;	
+							pixel_data[screenshot_index + 3] = 255;
 						}
 					}
 				}
@@ -488,11 +502,11 @@ public:
 		dev.commit();
 
 		oidn::BufferRef colorBuf = dev.newBuffer(px * py * 3 * sizeof(float));
-		colorBuf.write(0, px* py * 3 * sizeof(float), &float_data[0]);
+		colorBuf.write(0, px * py * 3 * sizeof(float), &float_data[0]);
 
 		oidn::FilterRef filter = dev.newFilter("RT");
-		
-		filter.setImage("color",  colorBuf, oidn::Format::Float3, px, py);
+
+		filter.setImage("color", colorBuf, oidn::Format::Float3, px, py);
 		filter.setImage("output", colorBuf, oidn::Format::Float3, px, py);
 		filter.set("hdr", false);
 		filter.commit();
@@ -505,34 +519,89 @@ public:
 
 		colorBuf.read(0, px * py * 3 * sizeof(float), &float_data[0]);
 
-		
-
 		vector <unsigned char> uc_output_data(4 * px * py, 0);
 
-		for (size_t i = 0; i < px; i++)
+		if (true)//filename != NULL)
 		{
-			for (size_t j = 0; j < py; j++)
+			for (size_t i = 0; i < px; i++)
 			{
-				size_t uc_index = 4 * (j * px + i);
-				size_t data_index = 3 * (j * px + i);
+				for (size_t j = 0; j < py; j++)
+				{
+					size_t uc_index = 4 * (j * px + i);
+					size_t data_index = 3 * (j * px + i);
 
-				uc_output_data[uc_index + 0] = static_cast<unsigned char>(fabsf(float_data[data_index + 0]) * 255.0f);
-				uc_output_data[uc_index + 1] = static_cast<unsigned char>(fabsf(float_data[data_index + 1]) * 255.0f);
-				uc_output_data[uc_index + 2] = static_cast<unsigned char>(fabsf(float_data[data_index + 2]) * 255.0f);
-				uc_output_data[uc_index + 3] = 255;
+					uc_output_data[uc_index + 0] = static_cast<unsigned char>(fabsf(float_data[data_index + 0]) * 255.0f);
+					uc_output_data[uc_index + 1] = static_cast<unsigned char>(fabsf(float_data[data_index + 1]) * 255.0f);
+					uc_output_data[uc_index + 2] = static_cast<unsigned char>(fabsf(float_data[data_index + 2]) * 255.0f);
+					uc_output_data[uc_index + 3] = 255;
+				}
 			}
+		
+			if(filename != NULL)
+				int result = stbi_write_png(filename, px, py, 4, &uc_output_data[0], 0);
 		}
 
 
 
 
 
-		int result = stbi_write_png(filename, px, py, 4, &uc_output_data[0], 0);
+		if (num_cams_wide == 1)
+		{
+			//memcpy(screenshotStagingBuffer.mapped, &uc_output_data[0], size);
+
+			//VkImageSubresourceRange subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+
+			//vks::tools::setImageLayout(
+			//	screenshotCmdBuffer,
+			//	screenshotStorageImage.image,
+			//	VK_IMAGE_LAYOUT_GENERAL,
+			//	VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			//	subresourceRange);
+
+			//VkBufferImageCopy copyRegion{};
+			//copyRegion.bufferOffset = 0;
+			//copyRegion.bufferRowLength = 0;
+			//copyRegion.bufferImageHeight = 0;
+
+			//copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			//copyRegion.imageSubresource.mipLevel = 0;
+			//copyRegion.imageSubresource.baseArrayLayer = 0;
+			//copyRegion.imageSubresource.layerCount = 1;
+
+			//copyRegion.imageOffset = { 0, 0, 0 };
+			//copyRegion.imageExtent.width = px;
+			//copyRegion.imageExtent.height = py;
+			//copyRegion.imageExtent.depth = 1;
+
+			//vkCmdCopyBufferToImage(
+			//	screenshotCmdBuffer,
+			//	screenshotStagingBuffer.buffer,
+			//	screenshotStorageImage.image,
+			//	VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			//	1,
+			//	&copyRegion);
+
+			//VkBufferMemoryBarrier barrier = {};
+			//barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+			//barrier.srcAccessMask = VK_ACCESS_HOST_READ_BIT;
+			//barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			//barrier.buffer = screenshotStagingBuffer.buffer;
+			//barrier.size = screenshotStagingBuffer.size;
+
+			//vkCmdPipelineBarrier(
+			//	screenshotCmdBuffer,
+			//	VK_PIPELINE_STAGE_HOST_BIT,
+			//	VK_PIPELINE_STAGE_TRANSFER_BIT,
+			//	0,
+			//	0, nullptr,
+			//	1, &barrier,
+			//	0, nullptr);
+
+			//vulkanDevice->flushCommandBuffer(screenshotCmdBuffer, queue);
 
 
 
-
-
+		}
 
 
 
@@ -541,11 +610,6 @@ public:
 		camera.matrices.perspective = cam_mat;
 		updateUniformBuffers();
 
-		// Delete staging buffer
-		screenshotStagingBuffer.destroy();
-
-		// Delete screenshot image
-		deleteScreenshotStorageImage();
 
 		// Delete screenshot descriptor pool
 		vkDestroyDescriptorPool(device, screenshotDescriptorPool, nullptr);
@@ -645,7 +709,7 @@ public:
 		glm::mat4 viewInverse;
 		glm::mat4 projInverse;
 		glm::mat4 transformation_matrix;
-		
+
 		glm::vec3 camera_pos;
 
 		int32_t vertexSize;
@@ -654,7 +718,7 @@ public:
 
 		uint32_t tri_count;
 		uint32_t light_tri_count;
-		
+
 		bool do_normals = false;
 
 	} uniformData;
@@ -669,7 +733,7 @@ public:
 	vkglTF::Model scene;
 
 	VulkanRaytracingSample::StorageImage screenshotStorageImage;
-	vks::Buffer screenshotStagingBuffer;
+	
 
 	// This sample is derived from an extended base class that saves most of the ray tracing setup boiler plate
 	VulkanExample() : VulkanRaytracingSample()
@@ -714,8 +778,8 @@ public:
 
 
 
-		
-		
+
+
 
 		// This fractal_500.gltf file can be downloaded from:
 		// https://drive.google.com/file/d/1BJJSC_K8NwaH8kP4tQpxlAmc6h6N3Ii1/view
@@ -822,15 +886,15 @@ public:
 			&accelerationStructureBuildSizesInfo);
 
 		//if (false == do_init)
-		
+
 		//deleteAccelerationStructure(bottomLevelAS);
 
-		if(do_init)
+		if (do_init)
 			createAccelerationStructure(bottomLevelAS, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, accelerationStructureBuildSizesInfo);
 		else
 		{
-//			deleteAccelerationStructure(bottomLevelAS);
-//			createAccelerationStructure(bottomLevelAS, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, accelerationStructureBuildSizesInfo);
+			//			deleteAccelerationStructure(bottomLevelAS);
+			//			createAccelerationStructure(bottomLevelAS, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, accelerationStructureBuildSizesInfo);
 		}
 
 
@@ -944,12 +1008,12 @@ public:
 		//if (false == do_init)
 		//deleteAccelerationStructure(topLevelAS);
 
-		if(do_init)
+		if (do_init)
 			createAccelerationStructure(topLevelAS, VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR, accelerationStructureBuildSizesInfo);
 		else
 		{
-//			deleteAccelerationStructure(topLevelAS);
-//			createAccelerationStructure(topLevelAS, VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR, accelerationStructureBuildSizesInfo);
+			//			deleteAccelerationStructure(topLevelAS);
+			//			createAccelerationStructure(topLevelAS, VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR, accelerationStructureBuildSizesInfo);
 		}
 		// Create a small scratch buffer used during build of the top level acceleration structure
 		ScratchBuffer scratchBuffer = createScratchBuffer(accelerationStructureBuildSizesInfo.buildScratchSize);
@@ -1040,7 +1104,7 @@ public:
 	void handleResize()
 	{
 		//m.lock();
-
+		
 		// Recreate image
 		createStorageImage(swapChain.colorFormat, { width, height, 1 });
 		// Update descriptor
@@ -1079,17 +1143,17 @@ public:
 				Dispatch the ray tracing commands
 			*/
 			VkStridedDeviceAddressRegionKHR emptySbtEntry = {};
-			vkCmdTraceRaysKHR(
-				drawCmdBuffers[i],
-				&shaderBindingTables.raygen.stridedDeviceAddressRegion,
-				&shaderBindingTables.miss.stridedDeviceAddressRegion,
-				&shaderBindingTables.hit.stridedDeviceAddressRegion,
-				&emptySbtEntry,
-				width,
-				height,
-				1);
+			//vkCmdTraceRaysKHR(
+			//	drawCmdBuffers[i],
+			//	&shaderBindingTables.raygen.stridedDeviceAddressRegion,
+			//	&shaderBindingTables.miss.stridedDeviceAddressRegion,
+			//	&shaderBindingTables.hit.stridedDeviceAddressRegion,
+			//	&emptySbtEntry,
+			//	width,
+			//	height,
+			//	1);
 
-
+			screenshot(1, NULL);
 			/*
 				Copy ray tracing output to swap chain image
 			*/
@@ -1105,7 +1169,7 @@ public:
 			// Prepare ray tracing output image as transfer source
 			vks::tools::setImageLayout(
 				drawCmdBuffers[i],
-				storageImage.image,
+				screenshotStorageImage.image,
 				VK_IMAGE_LAYOUT_GENERAL,
 				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				subresourceRange);
@@ -1116,32 +1180,32 @@ public:
 
 
 
-	
 
 
-				VkImageCopy copyRegion{};
-				copyRegion.srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
-				copyRegion.srcOffset = { 0, 0, 0 };
-				copyRegion.dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
-				copyRegion.dstOffset = { 0, 0, 0 };
-				copyRegion.extent = { width, height, 1 };
-				vkCmdCopyImage(drawCmdBuffers[i], storageImage.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, swapChain.images[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
 
-				// Transition swap chain image back for presentation
-				vks::tools::setImageLayout(
-					drawCmdBuffers[i],
-					swapChain.images[i],
-					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-					VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-					subresourceRange);
+			VkImageCopy copyRegion{};
+			copyRegion.srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+			copyRegion.srcOffset = { 0, 0, 0 };
+			copyRegion.dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+			copyRegion.dstOffset = { 0, 0, 0 };
+			copyRegion.extent = { width, height, 1 };
+			vkCmdCopyImage(drawCmdBuffers[i], screenshotStorageImage.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, swapChain.images[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
 
-				// Transition ray tracing output image back to general layout
-				vks::tools::setImageLayout(
-					drawCmdBuffers[i],
-					storageImage.image,
-					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-					VK_IMAGE_LAYOUT_GENERAL,
-					subresourceRange);
+			// Transition swap chain image back for presentation
+			vks::tools::setImageLayout(
+				drawCmdBuffers[i],
+				swapChain.images[i],
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+				subresourceRange);
+
+			// Transition ray tracing output image back to general layout
+			vks::tools::setImageLayout(
+				drawCmdBuffers[i],
+				screenshotStorageImage.image,
+				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				VK_IMAGE_LAYOUT_GENERAL,
+				subresourceRange);
 
 
 			drawUI(drawCmdBuffers[i], frameBuffers[i]);
@@ -1209,6 +1273,8 @@ public:
 		createDescriptorSets();
 		buildCommandBuffers();
 
+		screenshot(1, NULL);
+
 		prepared = true;
 	}
 
@@ -1239,8 +1305,7 @@ public:
 		createBottomLevelAccelerationStructure(false);
 		createTopLevelAccelerationStructure(false);
 
-
-
+		screenshot(1, NULL);
 
 		draw();
 
