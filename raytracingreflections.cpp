@@ -410,7 +410,7 @@ public:
 						screenshotCmdBuffer,
 						screenshotStorageImage.image,
 						VK_IMAGE_LAYOUT_GENERAL,
-						VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+						VK_IMAGE_LAYOUT_GENERAL,
 						subresourceRange);
 
 					VkBufferImageCopy copyRegion{};
@@ -428,7 +428,7 @@ public:
 					copyRegion.imageExtent.height = size_y;
 					copyRegion.imageExtent.depth = 1;
 
-					vkCmdCopyImageToBuffer(screenshotCmdBuffer, screenshotStorageImage.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, screenshotStagingBuffer.buffer, 1, &copyRegion);
+					vkCmdCopyImageToBuffer(screenshotCmdBuffer, screenshotStorageImage.image, VK_IMAGE_LAYOUT_GENERAL, screenshotStagingBuffer.buffer, 1, &copyRegion);
 
 
 					VkBufferMemoryBarrier barrier = {};
@@ -460,13 +460,21 @@ public:
 							size_t screenshot_x = cam_num_x * size_x + i;
 							size_t screenshot_y = cam_num_y * size_y + j;
 							size_t screenshot_index = 4 * (screenshot_y * (size_x * num_cams_wide) + screenshot_x);
-
+	
 							pixel_data[screenshot_index + 0] = fbpixels[fb_index + 0];
 							pixel_data[screenshot_index + 1] = fbpixels[fb_index + 1];
 							pixel_data[screenshot_index + 2] = fbpixels[fb_index + 2];
 							pixel_data[screenshot_index + 3] = 255;
+
+							/*fbpixels[fb_index + 0] = 255;
+							fbpixels[fb_index + 1] = 127;
+							fbpixels[fb_index + 2] = 0;*/
+
 						}
 					}
+
+					//memcpy(screenshotStagingBuffer.mapped, &fbpixels[0], size);
+
 				}
 			}
 		}
@@ -547,31 +555,51 @@ public:
 
 		if (num_cams_wide == 1)
 		{
-			//memcpy(screenshotStagingBuffer.mapped, &uc_output_data[0], size);
+			
 
-			//VkImageSubresourceRange subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+
+			memcpy(screenshotStagingBuffer.mapped, &uc_output_data[0], size);
+
+
+			VkImageSubresourceRange subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 
 			//vks::tools::setImageLayout(
 			//	screenshotCmdBuffer,
 			//	screenshotStorageImage.image,
-			//	VK_IMAGE_LAYOUT_GENERAL,
+			//	VK_IMAGE_LAYOUT_UNDEFINED,
 			//	VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			//	subresourceRange);
 
-			//VkBufferImageCopy copyRegion{};
-			//copyRegion.bufferOffset = 0;
-			//copyRegion.bufferRowLength = 0;
-			//copyRegion.bufferImageHeight = 0;
+			VkBufferImageCopy copyRegion{};
+			copyRegion.bufferOffset = 0;
+			copyRegion.bufferRowLength = 0;
+			copyRegion.bufferImageHeight = 0;
+			copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			copyRegion.imageSubresource.mipLevel = 0;
+			copyRegion.imageSubresource.baseArrayLayer = 0;
+			copyRegion.imageSubresource.layerCount = 1;
+			copyRegion.imageOffset = { 0, 0, 0 };
+			copyRegion.imageExtent.width = size_x;
+			copyRegion.imageExtent.height = size_y;
+			copyRegion.imageExtent.depth = 1;
 
-			//copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			//copyRegion.imageSubresource.mipLevel = 0;
-			//copyRegion.imageSubresource.baseArrayLayer = 0;
-			//copyRegion.imageSubresource.layerCount = 1;
+			VkImageMemoryBarrier imageMemoryBarrier;
+			imageMemoryBarrier.image = screenshotStorageImage.image;
+			imageMemoryBarrier.subresourceRange = subresourceRange;
+			imageMemoryBarrier.srcAccessMask = VK_ACCESS_HOST_READ_BIT;
+			imageMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 
-			//copyRegion.imageOffset = { 0, 0, 0 };
-			//copyRegion.imageExtent.width = px;
-			//copyRegion.imageExtent.height = py;
-			//copyRegion.imageExtent.depth = 1;
+			//vkCmdPipelineBarrier(
+			//	screenshotCmdBuffer,
+			//	VK_PIPELINE_STAGE_HOST_BIT,
+			//	VK_PIPELINE_STAGE_TRANSFER_BIT,
+			//	0,
+			//	0, nullptr,
+			//	0, nullptr,
+			//	1, &imageMemoryBarrier);
 
 			//vkCmdCopyBufferToImage(
 			//	screenshotCmdBuffer,
@@ -581,29 +609,12 @@ public:
 			//	1,
 			//	&copyRegion);
 
-			//VkBufferMemoryBarrier barrier = {};
-			//barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-			//barrier.srcAccessMask = VK_ACCESS_HOST_READ_BIT;
-			//barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			//barrier.buffer = screenshotStagingBuffer.buffer;
-			//barrier.size = screenshotStagingBuffer.size;
-
-			//vkCmdPipelineBarrier(
-			//	screenshotCmdBuffer,
-			//	VK_PIPELINE_STAGE_HOST_BIT,
-			//	VK_PIPELINE_STAGE_TRANSFER_BIT,
-			//	0,
-			//	0, nullptr,
-			//	1, &barrier,
-			//	0, nullptr);
-
 			//vulkanDevice->flushCommandBuffer(screenshotCmdBuffer, queue);
-
-
-
 		}
 
-
+		
+		
+		//exit(0);
 
 
 
@@ -638,7 +649,7 @@ public:
 		image.arrayLayers = 1;
 		image.samples = VK_SAMPLE_COUNT_1_BIT;
 		image.tiling = VK_IMAGE_TILING_OPTIMAL;
-		image.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		image.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 		image.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		VK_CHECK_RESULT(vkCreateImage(vulkanDevice->logicalDevice, &image, nullptr, &screenshotStorageImage.image));
 
