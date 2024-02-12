@@ -555,20 +555,18 @@ public:
 
 		if (num_cams_wide == 1)
 		{
-			
-
+			screenshotCmdBuffer = vulkanDevice->createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
 			memcpy(screenshotStagingBuffer.mapped, &uc_output_data[0], size);
 
-
 			VkImageSubresourceRange subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 
-			//vks::tools::setImageLayout(
-			//	screenshotCmdBuffer,
-			//	screenshotStorageImage.image,
-			//	VK_IMAGE_LAYOUT_UNDEFINED,
-			//	VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			//	subresourceRange);
+			vks::tools::setImageLayout(
+				screenshotCmdBuffer,
+				screenshotStorageImage.image,
+				VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				subresourceRange);
 
 			VkBufferImageCopy copyRegion{};
 			copyRegion.bufferOffset = 0;
@@ -592,24 +590,24 @@ public:
 			imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 			imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 
-			//vkCmdPipelineBarrier(
-			//	screenshotCmdBuffer,
-			//	VK_PIPELINE_STAGE_HOST_BIT,
-			//	VK_PIPELINE_STAGE_TRANSFER_BIT,
-			//	0,
-			//	0, nullptr,
-			//	0, nullptr,
-			//	1, &imageMemoryBarrier);
+			vkCmdCopyBufferToImage(
+				screenshotCmdBuffer,
+				screenshotStagingBuffer.buffer,
+				screenshotStorageImage.image,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				1,
+				&copyRegion);
 
-			//vkCmdCopyBufferToImage(
-			//	screenshotCmdBuffer,
-			//	screenshotStagingBuffer.buffer,
-			//	screenshotStorageImage.image,
-			//	VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			//	1,
-			//	&copyRegion);
+			vkCmdPipelineBarrier(
+				screenshotCmdBuffer,
+				VK_PIPELINE_STAGE_HOST_BIT,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				0,
+				0, nullptr,
+				0, nullptr,
+				1, &imageMemoryBarrier);
 
-			//vulkanDevice->flushCommandBuffer(screenshotCmdBuffer, queue);
+			vulkanDevice->flushCommandBuffer(screenshotCmdBuffer, queue);
 		}
 
 		
