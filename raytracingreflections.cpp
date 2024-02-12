@@ -514,25 +514,23 @@ public:
 
 		vector <unsigned char> uc_output_data(4 * px * py, 0);
 
-		if (true)//filename != NULL)
+		for (size_t i = 0; i < px; i++)
 		{
-			for (size_t i = 0; i < px; i++)
+			for (size_t j = 0; j < py; j++)
 			{
-				for (size_t j = 0; j < py; j++)
-				{
-					size_t uc_index = 4 * (j * px + i);
-					size_t data_index = 3 * (j * px + i);
+				size_t uc_index = 4 * (j * px + i);
+				size_t data_index = 3 * (j * px + i);
 
-					uc_output_data[uc_index + 0] = static_cast<unsigned char>(fabsf(float_data[data_index + 0]) * 255.0f);
-					uc_output_data[uc_index + 1] = static_cast<unsigned char>(fabsf(float_data[data_index + 1]) * 255.0f);
-					uc_output_data[uc_index + 2] = static_cast<unsigned char>(fabsf(float_data[data_index + 2]) * 255.0f);
-					uc_output_data[uc_index + 3] = 255;// pixel_data[uc_index];
-				}
+				uc_output_data[uc_index + 0] = static_cast<unsigned char>(fabsf(float_data[data_index + 0]) * 255.0f);
+				uc_output_data[uc_index + 1] = static_cast<unsigned char>(fabsf(float_data[data_index + 1]) * 255.0f);
+				uc_output_data[uc_index + 2] = static_cast<unsigned char>(fabsf(float_data[data_index + 2]) * 255.0f);
+				uc_output_data[uc_index + 3] = 255;// pixel_data[uc_index];
 			}
-		
-			if(filename != NULL)
-				int result = stbi_write_png(filename, px, py, 4, &uc_output_data[0], 0);
 		}
+
+		if (filename != NULL)
+			int result = stbi_write_png(filename, px, py, 4, &uc_output_data[0], 0);
+
 
 
 
@@ -1129,7 +1127,11 @@ public:
 			vkCmdBindPipeline(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline);
 			vkCmdBindDescriptorSets(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipelineLayout, 0, 2, sets, 0, 0);
 
+			paused = true;
+			taking_screenshot = true;
 			screenshot(1, NULL);
+			taking_screenshot = false;
+			paused = false;
 
 			/*
 				Copy ray tracing output to swap chain image
@@ -1175,7 +1177,6 @@ public:
 				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				VK_IMAGE_LAYOUT_GENERAL,
 				subresourceRange);
-
 
 			drawUI(drawCmdBuffers[i], frameBuffers[i]);
 
@@ -1240,8 +1241,6 @@ public:
 		createDescriptorSets();
 		buildCommandBuffers();
 
-		screenshot(1, NULL);
-
 		prepared = true;
 	}
 
@@ -1271,8 +1270,6 @@ public:
 
 		createBottomLevelAccelerationStructure(false);
 		createTopLevelAccelerationStructure(false);
-
-		screenshot(1, NULL);
 
 		draw();
 
