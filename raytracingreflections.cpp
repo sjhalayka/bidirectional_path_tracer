@@ -1127,11 +1127,7 @@ public:
 			vkCmdBindPipeline(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline);
 			vkCmdBindDescriptorSets(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipelineLayout, 0, 2, sets, 0, 0);
 
-			paused = true;
-			taking_screenshot = true;
 			screenshot(1, NULL);
-			taking_screenshot = false;
-			paused = false;
 
 			/*
 				Copy ray tracing output to swap chain image
@@ -1177,6 +1173,7 @@ public:
 				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				VK_IMAGE_LAYOUT_GENERAL,
 				subresourceRange);
+
 
 			drawUI(drawCmdBuffers[i], frameBuffers[i]);
 
@@ -1270,6 +1267,8 @@ public:
 
 		createBottomLevelAccelerationStructure(false);
 		createTopLevelAccelerationStructure(false);
+
+		screenshot(1, NULL);
 
 		draw();
 
