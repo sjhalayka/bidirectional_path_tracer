@@ -34,7 +34,7 @@ layout(binding = 2, set = 0) uniform UBO
 	uint tri_count;
 	uint light_tri_count;
 
-	bool do_normals;
+	bool do_depth;
 
 } ubo;
 
@@ -112,6 +112,10 @@ void main()
 	// Make the transparent sphere reflective
 	if(rayPayload.opacity == 0.0)
 	{
+//		rayPayload.color.r = 1;
+//		rayPayload.color.g = 0.5;
+//		rayPayload.color.b = 0;
+//		rayPayload.opacity = 0.0;
 		rayPayload.reflector = 1.0;
 	}
 

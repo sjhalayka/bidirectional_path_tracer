@@ -39,14 +39,14 @@ using std::ostringstream;
 size_t tri_count = 0;
 size_t light_tri_count = 0;
 
-bool do_normals = false;
+bool do_depth = false;
 
 tinygltf::Model model;
 std::vector<uint32_t> indexBuffer;
 std::vector<vkglTF::Vertex> vertexBuffer;
 std::vector<tinygltf::Image> gltfimages;
 
-VkCommandBuffer screenshotCmdBuffer = {};
+
 bool taking_screenshot = false;
 
 
@@ -350,7 +350,7 @@ public:
 
 		VK_CHECK_RESULT(screenshotStagingBuffer.map());
 
-		do_normals = false;
+		do_depth = false;
 		updateUniformBuffers();
 
 		unsigned short int px = size_x * static_cast<unsigned short>(num_cams_wide);
@@ -386,7 +386,7 @@ public:
 
 				// Prepare & flush command buffer
 				{
-					screenshotCmdBuffer = vulkanDevice->createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+					VkCommandBuffer screenshotCmdBuffer = vulkanDevice->createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
 					VkImageSubresourceRange subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 
@@ -417,19 +417,16 @@ public:
 					copyRegion.bufferOffset = 0;
 					copyRegion.bufferRowLength = 0;
 					copyRegion.bufferImageHeight = 0;
-
 					copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 					copyRegion.imageSubresource.mipLevel = 0;
 					copyRegion.imageSubresource.baseArrayLayer = 0;
 					copyRegion.imageSubresource.layerCount = 1;
-
 					copyRegion.imageOffset = { 0, 0, 0 };
 					copyRegion.imageExtent.width = size_x;
 					copyRegion.imageExtent.height = size_y;
 					copyRegion.imageExtent.depth = 1;
 
 					vkCmdCopyImageToBuffer(screenshotCmdBuffer, screenshotStorageImage.image, VK_IMAGE_LAYOUT_GENERAL, screenshotStagingBuffer.buffer, 1, &copyRegion);
-
 
 					VkBufferMemoryBarrier barrier = {};
 					barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -555,7 +552,7 @@ public:
 
 		if (num_cams_wide == 1)
 		{
-			screenshotCmdBuffer = vulkanDevice->createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+			VkCommandBuffer screenshotCmdBuffer = vulkanDevice->createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
 			memcpy(screenshotStagingBuffer.mapped, &uc_output_data[0], size);
 
@@ -610,9 +607,7 @@ public:
 			vulkanDevice->flushCommandBuffer(screenshotCmdBuffer, queue);
 		}
 
-		
-		
-		//exit(0);
+	//	exit(0);
 
 
 
@@ -728,7 +723,7 @@ public:
 		uint32_t tri_count;
 		uint32_t light_tri_count;
 
-		bool do_normals = false;
+		bool do_depth = false;
 
 	} uniformData;
 	vks::Buffer ubo;
@@ -1148,21 +1143,8 @@ public:
 			vkCmdBindPipeline(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline);
 			vkCmdBindDescriptorSets(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipelineLayout, 0, 2, sets, 0, 0);
 
-			/*
-				Dispatch the ray tracing commands
-			*/
-			VkStridedDeviceAddressRegionKHR emptySbtEntry = {};
-			//vkCmdTraceRaysKHR(
-			//	drawCmdBuffers[i],
-			//	&shaderBindingTables.raygen.stridedDeviceAddressRegion,
-			//	&shaderBindingTables.miss.stridedDeviceAddressRegion,
-			//	&shaderBindingTables.hit.stridedDeviceAddressRegion,
-			//	&emptySbtEntry,
-			//	width,
-			//	height,
-			//	1);
-
 			screenshot(1, NULL);
+
 			/*
 				Copy ray tracing output to swap chain image
 			*/
@@ -1183,21 +1165,13 @@ public:
 				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				subresourceRange);
 
-
-
-
-
-
-
-
-
-
 			VkImageCopy copyRegion{};
 			copyRegion.srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
 			copyRegion.srcOffset = { 0, 0, 0 };
 			copyRegion.dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
 			copyRegion.dstOffset = { 0, 0, 0 };
 			copyRegion.extent = { width, height, 1 };
+
 			vkCmdCopyImage(drawCmdBuffers[i], screenshotStorageImage.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, swapChain.images[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
 
 			// Transition swap chain image back for presentation
@@ -1245,7 +1219,7 @@ public:
 		uniformData.tri_count = tri_count;
 		uniformData.light_tri_count = light_tri_count;
 
-		uniformData.do_normals = do_normals;
+		uniformData.do_depth = do_depth;
 
 		memcpy(ubo.mapped, &uniformData, sizeof(uniformData));
 	}
