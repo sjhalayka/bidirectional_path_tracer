@@ -105,8 +105,6 @@ layout(binding = 2, set = 0) uniform UBO
 	uint tri_count;
 	uint light_tri_count;
 
-	bool do_depth;
-
 } ubo;
 
 layout(binding = 3, set = 0) buffer Vertices { vec4 v[]; } vertices;
@@ -919,10 +917,7 @@ void main()
 	for(int i = 0; i < channels; i++, curr_hue += hue_step_size, curr_eta += eta_step_size)
 	{
 		const float f = get_ray0(normal, depth, curr_hue, curr_eta);
-		
-		if(ubo.do_depth)
-			break;
-		
+	
 		const vec3 mask = hsv2rgb(vec3(curr_hue, 1.0, 1.0));
 		total += mask;
 		color += f*mask;
@@ -932,10 +927,7 @@ void main()
 
 	//color = pow(color, vec3(2.2));
 	
-	if(ubo.do_depth)
-		imageStore(color_image, pixel_pos, vec4(depth, depth, depth, 1.0));
-	else
-		imageStore(color_image, pixel_pos, vec4(color, 1.0));
+	imageStore(color_image, pixel_pos, vec4(color, depth));
 }
 
 

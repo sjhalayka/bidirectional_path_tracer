@@ -39,7 +39,6 @@ using std::ostringstream;
 size_t tri_count = 0;
 size_t light_tri_count = 0;
 
-bool do_depth = false;
 
 tinygltf::Model model;
 std::vector<uint32_t> indexBuffer;
@@ -350,9 +349,6 @@ public:
 
 		VK_CHECK_RESULT(screenshotStagingBuffer.map());
 
-		do_depth = false;
-		updateUniformBuffers();
-
 		unsigned short int px = size_x * static_cast<unsigned short>(num_cams_wide);
 		unsigned short int py = size_y * static_cast<unsigned short>(num_cams_wide);
 
@@ -457,21 +453,13 @@ public:
 							size_t screenshot_x = cam_num_x * size_x + i;
 							size_t screenshot_y = cam_num_y * size_y + j;
 							size_t screenshot_index = 4 * (screenshot_y * (size_x * num_cams_wide) + screenshot_x);
-	
+
 							pixel_data[screenshot_index + 0] = fbpixels[fb_index + 0];
 							pixel_data[screenshot_index + 1] = fbpixels[fb_index + 1];
 							pixel_data[screenshot_index + 2] = fbpixels[fb_index + 2];
-							pixel_data[screenshot_index + 3] = 255;
-
-							/*fbpixels[fb_index + 0] = 255;
-							fbpixels[fb_index + 1] = 127;
-							fbpixels[fb_index + 2] = 0;*/
-
+							pixel_data[screenshot_index + 3] = fbpixels[fb_index + 3];
 						}
 					}
-
-					//memcpy(screenshotStagingBuffer.mapped, &fbpixels[0], size);
-
 				}
 			}
 		}
@@ -538,7 +526,7 @@ public:
 					uc_output_data[uc_index + 0] = static_cast<unsigned char>(fabsf(float_data[data_index + 0]) * 255.0f);
 					uc_output_data[uc_index + 1] = static_cast<unsigned char>(fabsf(float_data[data_index + 1]) * 255.0f);
 					uc_output_data[uc_index + 2] = static_cast<unsigned char>(fabsf(float_data[data_index + 2]) * 255.0f);
-					uc_output_data[uc_index + 3] = 255;
+					uc_output_data[uc_index + 3] = 255;// pixel_data[uc_index];
 				}
 			}
 		
@@ -722,8 +710,6 @@ public:
 
 		uint32_t tri_count;
 		uint32_t light_tri_count;
-
-		bool do_depth = false;
 
 	} uniformData;
 	vks::Buffer ubo;
@@ -1218,8 +1204,6 @@ public:
 
 		uniformData.tri_count = tri_count;
 		uniformData.light_tri_count = light_tri_count;
-
-		uniformData.do_depth = do_depth;
 
 		memcpy(ubo.mapped, &uniformData, sizeof(uniformData));
 	}
