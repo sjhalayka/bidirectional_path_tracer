@@ -313,7 +313,7 @@ public:
 
 	void screenshot(size_t num_cams_wide, const char* filename)
 	{
-		bool do_denoising = false;
+		bool do_denoising = true;
 
 		if(num_cams_wide == 0)
 			return;
@@ -531,8 +531,6 @@ public:
 				MessageBox(NULL, errorMessage, "Error", MB_OK);
 
 			colorBuf.read(0, px * py * 3 * sizeof(float), &float_data[0]);
-
-			vector <unsigned char> uc_output_data(4 * px * py, 0);
 
 			for (size_t i = 0; i < px; i++)
 			{
