@@ -318,6 +318,21 @@ public:
 		if(num_cams_wide == 0)
 			return;
 
+		static size_t last_num_cams_wide = 0;
+		static size_t last_width = 0;
+		static size_t last_height = 0;
+
+		bool resized = false;
+
+		if (last_width != width)
+			resized = true;
+
+		if (last_height != height)
+			resized = true;
+
+		if (last_num_cams_wide != num_cams_wide)
+			resized = true;
+
 		const unsigned long int size_x = width;
 		const unsigned long int size_y = height;
 
@@ -327,29 +342,37 @@ public:
 
 		// Create screenshot image
 
-		deleteScreenshotStorageImage();
+		if (resized)
+		{
+			deleteScreenshotStorageImage();
 
-		if(num_cams_wide == 1) // Strange
-			createScreenshotStorageImage(VK_FORMAT_B8G8R8A8_UNORM, { size_x, size_y, 1 });
-		else
-			createScreenshotStorageImage(VK_FORMAT_R8G8B8A8_UNORM, { size_x, size_y, 1 });
+			if (num_cams_wide == 1) // Strange
+				createScreenshotStorageImage(VK_FORMAT_B8G8R8A8_UNORM, { size_x, size_y, 1 });
+			else
+				createScreenshotStorageImage(VK_FORMAT_R8G8B8A8_UNORM, { size_x, size_y, 1 });
+		}
 
 		// Create screenshot descriptor set
 		createScreenshotDescriptorSet();
 
 		vks::Buffer screenshotStagingBuffer;
 
-		//// Delete staging buffer
-		screenshotStagingBuffer.destroy();
-		// Create staging buffer
-		VK_CHECK_RESULT(vulkanDevice->createBuffer(
-			VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			&screenshotStagingBuffer,
-			size
-		));
 
-		VK_CHECK_RESULT(screenshotStagingBuffer.map());
+		if (resized)
+		{
+			//// Delete staging buffer
+			screenshotStagingBuffer.destroy();
+			// Create staging buffer
+			VK_CHECK_RESULT(vulkanDevice->createBuffer(
+				VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				&screenshotStagingBuffer,
+				size
+			));
+
+			VK_CHECK_RESULT(screenshotStagingBuffer.map());
+		}
+
 
 		unsigned short int px = size_x * static_cast<unsigned short>(num_cams_wide);
 		unsigned short int py = size_y * static_cast<unsigned short>(num_cams_wide);
@@ -469,7 +492,7 @@ public:
 
 		if (false == do_denoising)
 		{
-			uc_output_data = pixel_data;
+			uc_output_data = pixel_data; // couwld use a .swap() here
 
 			for (size_t i = 0; i < px; i++)
 			{
@@ -480,9 +503,8 @@ public:
 					uc_output_data[uc_index + 3] = 255;
 				}
 			}
-
 		}
-		if (do_denoising)
+		else
 		{
 			vector<float> float_data(3 * px * py);
 
@@ -499,17 +521,12 @@ public:
 				}
 			}
 
-
-
 			//ofstream out("test.pfm", std::ios_base::binary);
 			//ostringstream oss;
 			//oss << "PF" << '\n' << px << ' ' << py << '\n' << "-1.0" << '\n';
 			//out.write(reinterpret_cast<const char*>(oss.str().c_str()), oss.str().size());
 			//out.write(reinterpret_cast<const char*>(&float_data[0]), float_data.size()*sizeof(float));
 			//out.close();
-
-
-
 
 			oidn::DeviceRef dev = oidn::newDevice();
 			dev.commit();
