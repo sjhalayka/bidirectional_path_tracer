@@ -630,9 +630,9 @@ float get_ray0(inout vec3 out_normal, inout float out_depth, const float hue, co
 				used_count++;
 
 				if(ubo.screenshot_mode)
-					rays[i].base_color = get_radiance_backward(25, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+					rays[i].base_color = get_radiance_backward(100, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 				else
-					rays[i].base_color = get_radiance_backward(25, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+					rays[i].base_color = get_radiance_backward(100, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 
 				traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, rays[i].origin.xyz, tmin, rays[i].direction.xyz, tmax, 0);
 								
@@ -645,9 +645,7 @@ float get_ray0(inout vec3 out_normal, inout float out_depth, const float hue, co
 
 				vec4 hitPos = rays[i].origin + rays[i].direction * rayPayload.dist;
 
-				rays[i].depth = 1.0 - distance(hitPos, rays[i].origin)/10.0;
-
-
+				rays[i].depth = distance(hitPos, rays[i].origin);
 
 				// Do some fog in an AABB
 				float dist_color = 0.0;
@@ -874,7 +872,6 @@ float get_ray0(inout vec3 out_normal, inout float out_depth, const float hue, co
 
 	out_normal = rays[0].normal;
 	out_depth = rays[0].depth;
-	
 	return rays[0].accumulated_color;
 }
 
@@ -894,7 +891,7 @@ void main()
 	const float min_hue = rgb2hsv(vec3(1.0, 0.0, 0.0)).x; // red
 
 	const float max_eta = 0.95;
-	const float min_eta = 0.95;
+	const float min_eta = 0.75;
 
 	const float hue_diff = max_hue - min_hue;
 	const float hue_step_size = hue_diff / (channels - 1);

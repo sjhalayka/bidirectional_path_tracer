@@ -313,13 +313,13 @@ public:
 
 	void screenshot(size_t num_cams_wide, const char* filename)
 	{
+		bool do_denoising = false;
+
 		if(num_cams_wide == 0)
 			return;
 
 		const unsigned long int size_x = width;
 		const unsigned long int size_y = height;
-
-		vks::Buffer screenshotStagingBuffer;
 
 		const glm::mat4x4 cam_mat = camera.matrices.perspective;
 
@@ -336,6 +336,8 @@ public:
 
 		// Create screenshot descriptor set
 		createScreenshotDescriptorSet();
+
+		vks::Buffer screenshotStagingBuffer;
 
 		//// Delete staging buffer
 		screenshotStagingBuffer.destroy();
@@ -377,7 +379,6 @@ public:
 				const float top = -h + (cam_num_y + 1) * cam_height;
 
 				camera.matrices.perspective = glm::frustum(left, right, bottom, top, near_plane, far_plane);
-
 				updateUniformBuffers();
 
 				// Prepare & flush command buffer
@@ -464,76 +465,93 @@ public:
 			}
 		}
 
-		vector<float> float_data(3 * px * py);
-
-		for (size_t i = 0; i < px; i++)
-		{
-			for (size_t j = 0; j < py; j++)
-			{
-				size_t float_index = 3 * (j * px + i);
-				size_t index = 4 * (j * px + i);
-
-				float_data[float_index + 0] = static_cast<float>(pixel_data[index + 0]) / 255.0f;
-				float_data[float_index + 1] = static_cast<float>(pixel_data[index + 1]) / 255.0f;
-				float_data[float_index + 2] = static_cast<float>(pixel_data[index + 2]) / 255.0f;
-			}
-		}
-
-
-
-		//ofstream out("test.pfm", std::ios_base::binary);
-		//ostringstream oss;
-		//oss << "PF" << '\n' << px << ' ' << py << '\n' << "-1.0" << '\n';
-		//out.write(reinterpret_cast<const char*>(oss.str().c_str()), oss.str().size());
-		//out.write(reinterpret_cast<const char*>(&float_data[0]), float_data.size()*sizeof(float));
-		//out.close();
-
-
-
-
-		oidn::DeviceRef dev = oidn::newDevice();
-		dev.commit();
-
-		oidn::BufferRef colorBuf = dev.newBuffer(px * py * 3 * sizeof(float));
-		colorBuf.write(0, px * py * 3 * sizeof(float), &float_data[0]);
-
-		oidn::FilterRef filter = dev.newFilter("RT");
-
-		filter.setImage("color", colorBuf, oidn::Format::Float3, px, py);
-		filter.setImage("output", colorBuf, oidn::Format::Float3, px, py);
-		filter.set("hdr", false);
-		filter.commit();
-		filter.execute();
-
-		// Check for errors
-		const char* errorMessage;
-		if (dev.getError(errorMessage) != oidn::Error::None)
-			MessageBox(NULL, errorMessage, "Error", MB_OK);
-
-		colorBuf.read(0, px * py * 3 * sizeof(float), &float_data[0]);
-
 		vector <unsigned char> uc_output_data(4 * px * py, 0);
 
-		for (size_t i = 0; i < px; i++)
+		if (false == do_denoising)
 		{
-			for (size_t j = 0; j < py; j++)
-			{
-				size_t uc_index = 4 * (j * px + i);
-				size_t data_index = 3 * (j * px + i);
+			uc_output_data = pixel_data;
 
-				uc_output_data[uc_index + 0] = static_cast<unsigned char>(fabsf(float_data[data_index + 0]) * 255.0f);
-				uc_output_data[uc_index + 1] = static_cast<unsigned char>(fabsf(float_data[data_index + 1]) * 255.0f);
-				uc_output_data[uc_index + 2] = static_cast<unsigned char>(fabsf(float_data[data_index + 2]) * 255.0f);
-				uc_output_data[uc_index + 3] = 255;// pixel_data[uc_index];
+			for (size_t i = 0; i < px; i++)
+			{
+				for (size_t j = 0; j < py; j++)
+				{
+					size_t uc_index = 4 * (j * px + i);
+
+					uc_output_data[uc_index + 3] = 255;
+				}
+			}
+
+		}
+		if (do_denoising)
+		{
+			vector<float> float_data(3 * px * py);
+
+			for (size_t i = 0; i < px; i++)
+			{
+				for (size_t j = 0; j < py; j++)
+				{
+					size_t float_index = 3 * (j * px + i);
+					size_t index = 4 * (j * px + i);
+
+					float_data[float_index + 0] = static_cast<float>(pixel_data[index + 0]) / 255.0f;
+					float_data[float_index + 1] = static_cast<float>(pixel_data[index + 1]) / 255.0f;
+					float_data[float_index + 2] = static_cast<float>(pixel_data[index + 2]) / 255.0f;
+				}
+			}
+
+
+
+			//ofstream out("test.pfm", std::ios_base::binary);
+			//ostringstream oss;
+			//oss << "PF" << '\n' << px << ' ' << py << '\n' << "-1.0" << '\n';
+			//out.write(reinterpret_cast<const char*>(oss.str().c_str()), oss.str().size());
+			//out.write(reinterpret_cast<const char*>(&float_data[0]), float_data.size()*sizeof(float));
+			//out.close();
+
+
+
+
+			oidn::DeviceRef dev = oidn::newDevice();
+			dev.commit();
+
+			oidn::BufferRef colorBuf = dev.newBuffer(px * py * 3 * sizeof(float));
+			colorBuf.write(0, px * py * 3 * sizeof(float), &float_data[0]);
+
+			oidn::FilterRef filter = dev.newFilter("RT");
+
+			filter.setImage("color", colorBuf, oidn::Format::Float3, px, py);
+			filter.setImage("output", colorBuf, oidn::Format::Float3, px, py);
+			filter.set("hdr", false);
+			filter.commit();
+			filter.execute();
+
+			// Check for errors
+			const char* errorMessage;
+			if (dev.getError(errorMessage) != oidn::Error::None)
+				MessageBox(NULL, errorMessage, "Error", MB_OK);
+
+			colorBuf.read(0, px * py * 3 * sizeof(float), &float_data[0]);
+
+			vector <unsigned char> uc_output_data(4 * px * py, 0);
+
+			for (size_t i = 0; i < px; i++)
+			{
+				for (size_t j = 0; j < py; j++)
+				{
+					size_t uc_index = 4 * (j * px + i);
+					size_t data_index = 3 * (j * px + i);
+
+					uc_output_data[uc_index + 0] = static_cast<unsigned char>(fabsf(float_data[data_index + 0]) * 255.0f);
+					uc_output_data[uc_index + 1] = static_cast<unsigned char>(fabsf(float_data[data_index + 1]) * 255.0f);
+					uc_output_data[uc_index + 2] = static_cast<unsigned char>(fabsf(float_data[data_index + 2]) * 255.0f);
+					uc_output_data[uc_index + 3] = 255;// pixel_data[uc_index];
+				}
 			}
 		}
+
 
 		if (filename != NULL)
 			int result = stbi_write_png(filename, px, py, 4, &uc_output_data[0], 0);
-
-
-
-
 
 
 		if (num_cams_wide == 1)
@@ -593,7 +611,14 @@ public:
 			vulkanDevice->flushCommandBuffer(screenshotCmdBuffer, queue);
 		}
 
-	//	exit(0);
+
+
+
+		// do depth of field here
+
+
+
+
 
 
 
