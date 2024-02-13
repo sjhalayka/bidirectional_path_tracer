@@ -326,11 +326,9 @@ public:
 
 		if (last_width != width)
 			resized = true;
-
-		if (last_height != height)
+		else if (last_height != height)
 			resized = true;
-
-		if (last_num_cams_wide != num_cams_wide)
+		else if (last_num_cams_wide != num_cams_wide)
 			resized = true;
 
 		const unsigned long int size_x = width;
@@ -372,7 +370,6 @@ public:
 
 			VK_CHECK_RESULT(screenshotStagingBuffer.map());
 		}
-
 
 		unsigned short int px = size_x * static_cast<unsigned short>(num_cams_wide);
 		unsigned short int py = size_y * static_cast<unsigned short>(num_cams_wide);
