@@ -38,7 +38,7 @@ using std::ostringstream;
 
 size_t tri_count = 0;
 size_t light_tri_count = 0;
-
+mutex m;
 
 tinygltf::Model model;
 std::vector<uint32_t> indexBuffer;
@@ -313,10 +313,15 @@ public:
 
 	void screenshot(size_t num_cams_wide, const char* filename)
 	{
+		//m.lock();
+
 		bool do_denoising = true;
 
-		if(num_cams_wide == 0)
-			return;
+		//if (num_cams_wide == 0)
+		//{
+		//	m.unlock();
+		//	return;
+		//}
 
 		static size_t last_num_cams_wide = 0;
 		static size_t last_width = 0;
@@ -489,7 +494,7 @@ public:
 
 		if (false == do_denoising)
 		{
-			uc_output_data = pixel_data; // couwld use a .swap() here
+			uc_output_data = pixel_data; // could use a .swap() here
 
 			for (size_t i = 0; i < px; i++)
 			{
@@ -535,7 +540,7 @@ public:
 
 			filter.setImage("color", colorBuf, oidn::Format::Float3, px, py);
 			filter.setImage("output", colorBuf, oidn::Format::Float3, px, py);
-			filter.set("hdr", false);
+			filter.set("hdr", false); // Do not enable this, or the lights will look strange
 			filter.commit();
 			filter.execute();
 
@@ -640,6 +645,8 @@ public:
 
 		// Delete screenshot descriptor pool
 		vkDestroyDescriptorPool(device, screenshotDescriptorPool, nullptr);
+
+		//m.unlock();
 	}
 
 
@@ -1128,7 +1135,7 @@ public:
 	*/
 	void handleResize()
 	{
-		//m.lock();
+		m.lock();
 		
 		// Recreate image
 		createStorageImage(swapChain.colorFormat, { width, height, 1 });
@@ -1138,7 +1145,7 @@ public:
 		vkUpdateDescriptorSets(device, 1, &resultImageWrite, 0, VK_NULL_HANDLE);
 		resized = false;
 
-		//m.unlock();
+		m.unlock();
 	}
 
 	/*
@@ -1164,7 +1171,10 @@ public:
 			vkCmdBindPipeline(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline);
 			vkCmdBindDescriptorSets(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipelineLayout, 0, 2, sets, 0, 0);
 
+			paused = true;
 			screenshot(1, NULL);
+			paused = false;
+
 
 			/*
 				Copy ray tracing output to swap chain image
@@ -1300,12 +1310,15 @@ public:
 		// see: https://github.com/KhronosGroup/Vulkan-Samples/tree/main/samples/extensions/raytracing_extended
 		// Note: this causes a bug which locks the app if window becomes non-minimized
 
-
+		m.lock();
 
 		createBottomLevelAccelerationStructure(false);
 		createTopLevelAccelerationStructure(false);
-
+		
+		paused = true;
 		screenshot(1, NULL);
+		paused = false;
+
 
 		draw();
 
@@ -1315,6 +1328,7 @@ public:
 		if (!paused || camera.updated)
 			updateUniformBuffers();
 
+		m.unlock();
 	}
 };
 
