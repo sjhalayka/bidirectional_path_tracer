@@ -70,8 +70,6 @@ float noise3(vec3 p, float wavelength){
 
 
 
-//ivec2 pixel_pos = ;
-//ivec2 res = ivec2(gl_LaunchSizeEXT.xy);
 
 const float TWO_PI = 8.0 * atan(1.0);
 
@@ -573,14 +571,14 @@ bool BBoxIntersect(const vec3 boxMin, const vec3 boxMax, const vec3 origin, cons
 }
 
 
-void get_origin_and_direction(inout vec4 origin, inout vec4 direction, float x, float y, float image_width, float image_height)
+void get_origin_target_and_direction(inout vec4 origin, vec4 target, inout vec4 direction, float x, float y, float image_width, float image_height)
 {
 	const vec2 pixelCenter = vec2(x, y) + vec2(0.5);
 	const vec2 inUV = pixelCenter/vec2(image_width, image_height);
 	vec2 d = inUV * 2.0 - 1.0;
 
 	origin = ubo.viewInverse * vec4(0,0,0,1);
-	vec4 target = ubo.projInverse * vec4(d.x, d.y, 1, 1) ;
+	target = ubo.projInverse * vec4(d.x, d.y, 1, 1) ;
 	direction = ubo.viewInverse*vec4(normalize(target.xyz / target.w), 0);
 }
 
@@ -920,15 +918,35 @@ void main()
 	float depth = 0;
 
 	vec4 origin;
+	vec4 target;
 	vec4 direction;
 
-	get_origin_and_direction(
-		origin, 
+	get_origin_target_and_direction(
+		origin,
+		target,
 		direction, 
 		gl_LaunchIDEXT.x, 
 		gl_LaunchIDEXT.y,
 		gl_LaunchSizeEXT.x,
 		gl_LaunchSizeEXT.y);
+
+	float focal_distance = 1.0;
+
+	mat4 v;
+	v = (ubo.viewInverse);
+
+	vec4 d;
+	d.x = v[2][0] - ubo.camera_pos.x;
+	d.y = v[2][1] - ubo.camera_pos.y;
+	d.z = v[2][2] - ubo.camera_pos.z;
+	d.w = 0.0;
+
+	vec4 focal_point = d * focal_distance;
+
+	//direction = -(target);
+	
+
+
 
 	for(int i = 0; i < channels; i++, curr_hue += hue_step_size, curr_eta += eta_step_size)
 	{
