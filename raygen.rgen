@@ -634,7 +634,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				used_count++;
 
 				if(ubo.screenshot_mode)
-					rays[i].base_color = get_radiance_backward(1000, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+					rays[i].base_color = get_radiance_backward(100, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 				else
 					rays[i].base_color = get_radiance_backward(25, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 
@@ -889,7 +889,7 @@ vec3 plane_ray_intersection(vec3 planeP, vec3 planeN, vec3 rayP, vec3 rayD)
 void main() 
 {
 	// Only seed once per pixel
-	prng_state = gl_LaunchSizeEXT.x * gl_LaunchIDEXT.y + gl_LaunchIDEXT.x;
+	prng_state = gl_LaunchIDEXT.y*gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x;
 
 	vec4 origin;
 	vec4 direction;
@@ -910,10 +910,6 @@ void main()
 	//direction = focal_point_on_plane - origin;
 	//origin = focal_point_on_plane;
 	
-
-
-
-
 	// Do chromatic aberration (good for making rainbows via prisms)
 	const int channels = 3;
 
@@ -930,23 +926,25 @@ void main()
 	const float eta_diff = max_eta - min_eta;
 	const float eta_step_size = eta_diff / (channels - 1);
 
+	const int num_samples = 4;
+
 	vec3 grand_color = vec3(0.0);
-	const int num_samples = 5;
 
 	for(int s = 0; s < num_samples; s++)
 	{
 		float curr_hue = min_hue;
 		float curr_eta = min_eta;
 
-		vec3 total = vec3(0.0);
 		vec3 color = vec3(0.0);
 
-		for(int i = 0; i < channels; i++, curr_hue += hue_step_size, curr_eta += eta_step_size)
+		vec4 rand_origin = origin + vec4(RandomUnitVector(prng_state), 0.0)*0.01;
+		vec4 rand_direction = focal_point_on_plane - rand_origin;
+
+		for(int c = 0; c < channels; c++, curr_hue += hue_step_size, curr_eta += eta_step_size)
 		{
-			const float f = get_ray0(origin, direction, curr_hue, curr_eta);
+			const float f = get_ray0(rand_origin, rand_direction, curr_hue, curr_eta);
 	
 			const vec3 mask = hsv2rgb(vec3(curr_hue, 1.0, 1.0));
-			total += mask;
 			color += f*mask;
 		}
 
@@ -954,6 +952,7 @@ void main()
 	}
 
 	grand_color /= num_samples;
+
 
 
 
