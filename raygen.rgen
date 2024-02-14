@@ -902,7 +902,7 @@ void main()
 		gl_LaunchSizeEXT.x,
 		gl_LaunchSizeEXT.y);
 
-	float focal_distance = 1.0;
+	float focal_distance = 6.0;
 	vec4 focal_point_bootstrap = origin + normalize(direction) * focal_distance;
 	vec4 focal_point_on_plane = vec4(plane_ray_intersection(focal_point_bootstrap.xyz, (origin - focal_point_bootstrap).xyz, origin.xyz, direction.xyz), 0.0);
 
@@ -937,7 +937,12 @@ void main()
 
 		vec3 color = vec3(0.0);
 
-		vec4 rand_origin = origin + vec4(RandomUnitVector(prng_state), 0.0)*0.01;
+		vec3 r;
+		r.x = pow(RandomUnitVector(prng_state).x, 1.0);
+		r.y = pow(RandomUnitVector(prng_state).y, 1.0);
+		r.z = pow(RandomUnitVector(prng_state).z, 1.0);
+
+		vec4 rand_origin = origin + vec4(r, 0.0)*0.01;
 		vec4 rand_direction = focal_point_on_plane - rand_origin;
 
 		for(int c = 0; c < channels; c++, curr_hue += hue_step_size, curr_eta += eta_step_size)
@@ -956,7 +961,7 @@ void main()
 
 
 
-	//color = pow(color, vec3(2.2));
+	//grand_color = pow(grand_color, vec3(2.2));
 	
 	imageStore(color_image, ivec2(gl_LaunchIDEXT.xy), vec4(grand_color, 1.0));
 }
