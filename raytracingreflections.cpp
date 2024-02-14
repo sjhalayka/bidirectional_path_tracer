@@ -322,14 +322,14 @@ public:
 		static size_t last_width = 0;
 		static size_t last_height = 0;
 
-		bool resized = false;
+		bool resized_something = false;
 
 		if (last_width != width)
-			resized = true;
+			resized_something = true;
 		else if (last_height != height)
-			resized = true;
+			resized_something = true;
 		else if (last_num_cams_wide != num_cams_wide)
-			resized = true;
+			resized_something = true;
 
 		const unsigned long int size_x = width;
 		const unsigned long int size_y = height;
@@ -340,7 +340,7 @@ public:
 
 		// Create screenshot image
 
-		if (resized)
+		if (resized_something)
 		{
 			deleteScreenshotStorageImage();
 
@@ -356,7 +356,7 @@ public:
 		vks::Buffer screenshotStagingBuffer;
 
 
-		if (resized)
+		if (resized_something)
 		{
 			//// Delete staging buffer
 			screenshotStagingBuffer.destroy();
@@ -1164,10 +1164,13 @@ public:
 			vkCmdBindPipeline(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline);
 			vkCmdBindDescriptorSets(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipelineLayout, 0, 2, sets, 0, 0);
 
+			m.lock();
+
 			paused = true;
 			screenshot(1, NULL);
 			paused = false;
 
+			m.unlock();
 
 			/*
 				Copy ray tracing output to swap chain image
@@ -1297,11 +1300,6 @@ public:
 	{
 		if (!prepared)
 			return;
-
-		// To do: There's a way to update the structure instead of 
-		// deleting and recreating it
-		// see: https://github.com/KhronosGroup/Vulkan-Samples/tree/main/samples/extensions/raytracing_extended
-		// Note: this causes a bug which locks the app if window becomes non-minimized
 
 		m.lock();
 

@@ -70,8 +70,8 @@ float noise3(vec3 p, float wavelength){
 
 
 
-ivec2 pixel_pos = ivec2(gl_LaunchIDEXT.xy);
-ivec2 res = ivec2(gl_LaunchSizeEXT.xy);
+//ivec2 pixel_pos = ;
+//ivec2 res = ivec2(gl_LaunchSizeEXT.xy);
 
 const float TWO_PI = 8.0 * atan(1.0);
 
@@ -573,7 +573,21 @@ bool BBoxIntersect(const vec3 boxMin, const vec3 boxMax, const vec3 origin, cons
 }
 
 
-float get_ray0(inout vec3 out_normal, inout float out_depth, const float hue, const float eta)
+void get_origin_and_direction(inout vec4 origin, inout vec4 direction, float x, float y, float image_width, float image_height)
+{
+	const vec2 pixelCenter = vec2(x, y) + vec2(0.5);
+	const vec2 inUV = pixelCenter/vec2(image_width, image_height);
+	vec2 d = inUV * 2.0 - 1.0;
+
+	origin = ubo.viewInverse * vec4(0,0,0,1);
+	vec4 target = ubo.projInverse * vec4(d.x, d.y, 1, 1) ;
+	direction = ubo.viewInverse*vec4(normalize(target.xyz / target.w), 0);
+}
+
+
+
+
+float get_ray0(vec4 origin, vec4 direction, inout vec3 out_normal, inout float out_depth, const float hue, const float eta)
 {
 	// This algorithm stops when the buffer runs out of space,
 	// or when the rays miss everything,
@@ -582,13 +596,7 @@ float get_ray0(inout vec3 out_normal, inout float out_depth, const float hue, co
 	ray rays[buffer_size];
 	int current_buffer_index = 0;
 
-	const vec2 pixelCenter = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
-	const vec2 inUV = pixelCenter/vec2(gl_LaunchSizeEXT.xy);
-	vec2 d = inUV * 2.0 - 1.0;
 
-	vec4 origin = ubo.viewInverse * vec4(0,0,0,1);
-	vec4 target = ubo.projInverse * vec4(d.x, d.y, 1, 1) ;
-	vec4 direction = ubo.viewInverse*vec4(normalize(target.xyz / target.w), 0);
 
 	uint rayFlags = gl_RayFlagsOpaqueEXT;
 	uint cullMask = 0xff;
@@ -906,14 +914,25 @@ void main()
 	vec3 color = vec3(0.0);
 
 	// Only seed once per pixel
-	prng_state = res.x * pixel_pos.y + pixel_pos.x;
+	prng_state = gl_LaunchSizeEXT.x * gl_LaunchIDEXT.y + gl_LaunchIDEXT.x;
 
 	vec3 normal = vec3(0.0, 0.0, 0.0);
 	float depth = 0;
 
+	vec4 origin;
+	vec4 direction;
+
+	get_origin_and_direction(
+		origin, 
+		direction, 
+		gl_LaunchIDEXT.x, 
+		gl_LaunchIDEXT.y,
+		gl_LaunchSizeEXT.x,
+		gl_LaunchSizeEXT.y);
+
 	for(int i = 0; i < channels; i++, curr_hue += hue_step_size, curr_eta += eta_step_size)
 	{
-		const float f = get_ray0(normal, depth, curr_hue, curr_eta);
+		const float f = get_ray0(origin, direction, normal, depth, curr_hue, curr_eta);
 	
 		const vec3 mask = hsv2rgb(vec3(curr_hue, 1.0, 1.0));
 		total += mask;
@@ -924,7 +943,7 @@ void main()
 
 	//color = pow(color, vec3(2.2));
 	
-	imageStore(color_image, pixel_pos, vec4(color, depth));
+	imageStore(color_image, ivec2(gl_LaunchIDEXT.xy), vec4(color, depth));
 }
 
 
