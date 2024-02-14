@@ -578,7 +578,7 @@ void get_origin_target_and_direction(inout vec4 origin, vec4 target, inout vec4 
 	vec2 d = inUV * 2.0 - 1.0;
 
 	origin = ubo.viewInverse * vec4(0,0,0,1);
-	target = ubo.projInverse * vec4(d.x, d.y, 1, 1) ;
+	target = ubo.projInverse * vec4(d.x, d.y, 1, 1);
 	direction = ubo.viewInverse*vec4(normalize(target.xyz / target.w), 0);
 }
 
@@ -932,18 +932,11 @@ void main()
 
 	float focal_distance = 1.0;
 
-	mat4 v;
-	v = inverse(ubo.viewInverse);
+	vec4 d = normalize(direction) * focal_distance;
 
-	vec4 d;
-	d.x = v[2][0] + ubo.camera_pos.x;
-	d.y = v[2][1] + ubo.camera_pos.y;
-	d.z = v[2][2] + ubo.camera_pos.z;
-	d.w = 0.0;
+	vec4 focal_point = (origin + d);
 
-	vec4 focal_point = d * focal_distance;
-
-	direction = focal_point - origin;
+	//direction = focal_point - origin;
 	
 
 
