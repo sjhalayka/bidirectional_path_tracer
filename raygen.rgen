@@ -594,8 +594,6 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 	ray rays[buffer_size];
 	int current_buffer_index = 0;
 
-
-
 	uint rayFlags = gl_RayFlagsOpaqueEXT;
 	uint cullMask = 0xff;
 	float tmin = 0.001;
@@ -890,11 +888,6 @@ vec3 plane_ray_intersection(vec3 planeP, vec3 planeN, vec3 rayP, vec3 rayD)
 
 void main() 
 {
-
-
-
-
-
 	// Only seed once per pixel
 	prng_state = gl_LaunchSizeEXT.x * gl_LaunchIDEXT.y + gl_LaunchIDEXT.x;
 
@@ -914,7 +907,7 @@ void main()
 	vec4 focal_point_on_plane = vec4(plane_ray_intersection(focal_point_bootstrap.xyz, (origin - focal_point_bootstrap).xyz, origin.xyz, direction.xyz), 0.0);
 
 	// test
-	direction = focal_point_on_plane - origin;
+	//direction = focal_point_on_plane - origin;
 	//origin = focal_point_on_plane;
 	
 
@@ -924,7 +917,7 @@ void main()
 	// Do chromatic aberration (good for making rainbows via prisms)
 	const int channels = 3;
 
-//	const float max_hue = rgb2hsv(vec3(1.0, 0.0, 1.0)).x; // violet
+	//const float max_hue = rgb2hsv(vec3(1.0, 0.0, 1.0)).x; // violet
 	const float max_hue = rgb2hsv(vec3(0.0, 0.0, 1.0)).x; // blue
 	const float min_hue = rgb2hsv(vec3(1.0, 0.0, 0.0)).x; // red
 
@@ -937,29 +930,36 @@ void main()
 	const float eta_diff = max_eta - min_eta;
 	const float eta_step_size = eta_diff / (channels - 1);
 
-	float curr_hue = min_hue;
-	float curr_eta = min_eta;
+	vec3 grand_color = vec3(0.0);
+	const int num_samples = 5;
 
-	vec3 total = vec3(0.0);
-	vec3 color = vec3(0.0);
-
-	for(int i = 0; i < channels; i++, curr_hue += hue_step_size, curr_eta += eta_step_size)
+	for(int s = 0; s < num_samples; s++)
 	{
-		const float f = get_ray0(origin, direction, curr_hue, curr_eta);
+		float curr_hue = min_hue;
+		float curr_eta = min_eta;
+
+		vec3 total = vec3(0.0);
+		vec3 color = vec3(0.0);
+
+		for(int i = 0; i < channels; i++, curr_hue += hue_step_size, curr_eta += eta_step_size)
+		{
+			const float f = get_ray0(origin, direction, curr_hue, curr_eta);
 	
-		const vec3 mask = hsv2rgb(vec3(curr_hue, 1.0, 1.0));
-		total += mask;
-		color += f*mask;
+			const vec3 mask = hsv2rgb(vec3(curr_hue, 1.0, 1.0));
+			total += mask;
+			color += f*mask;
+		}
+
+		grand_color += color;
 	}
 
-	color /= total;
-
+	grand_color /= num_samples;
 
 
 
 	//color = pow(color, vec3(2.2));
 	
-	imageStore(color_image, ivec2(gl_LaunchIDEXT.xy), vec4(color, 1.0));
+	imageStore(color_image, ivec2(gl_LaunchIDEXT.xy), vec4(grand_color, 1.0));
 }
 
 
