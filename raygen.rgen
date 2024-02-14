@@ -933,17 +933,17 @@ void main()
 	float focal_distance = 1.0;
 
 	mat4 v;
-	v = (ubo.viewInverse);
+	v = inverse(ubo.viewInverse);
 
 	vec4 d;
-	d.x = v[2][0] - ubo.camera_pos.x;
-	d.y = v[2][1] - ubo.camera_pos.y;
-	d.z = v[2][2] - ubo.camera_pos.z;
+	d.x = v[2][0] + ubo.camera_pos.x;
+	d.y = v[2][1] + ubo.camera_pos.y;
+	d.z = v[2][2] + ubo.camera_pos.z;
 	d.w = 0.0;
 
 	vec4 focal_point = d * focal_distance;
 
-	//direction = -(target);
+	direction = focal_point - origin;
 	
 
 
