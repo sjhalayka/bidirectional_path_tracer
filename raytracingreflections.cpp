@@ -313,15 +313,10 @@ public:
 
 	void screenshot(size_t num_cams_wide, const char* filename)
 	{
-		//m.lock();
-
 		bool do_denoising = true;
 
-		//if (num_cams_wide == 0)
-		//{
-		//	m.unlock();
-		//	return;
-		//}
+		if (num_cams_wide == 0)
+			return;
 
 		static size_t last_num_cams_wide = 0;
 		static size_t last_width = 0;
@@ -645,8 +640,6 @@ public:
 
 		// Delete screenshot descriptor pool
 		vkDestroyDescriptorPool(device, screenshotDescriptorPool, nullptr);
-
-		//m.unlock();
 	}
 
 
@@ -1319,11 +1312,7 @@ public:
 		screenshot(1, NULL);
 		paused = false;
 
-
 		draw();
-
-
-
 
 		if (!paused || camera.updated)
 			updateUniformBuffers();
