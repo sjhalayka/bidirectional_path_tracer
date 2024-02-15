@@ -934,7 +934,7 @@ void main()
 	}
 
 
-	// Do pseudorandom DOF rays
+	// Do pseudorandom depth of field (DOF) rays
 	float focal_distance = 6.0;
 	vec4 focal_point_bootstrap = origin + normalize(direction) * focal_distance;
 	vec4 focal_point_on_plane = vec4(plane_ray_intersection(focal_point_bootstrap.xyz, (origin - focal_point_bootstrap).xyz, origin.xyz, direction.xyz), 0.0);
