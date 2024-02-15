@@ -1418,11 +1418,11 @@ void vkglTF::Model::loadFromFile(
 	if (false == read_from_disk)
 	{
 		return;
-		/*
-		vkDestroyBuffer(device->logicalDevice, vertices.buffer, nullptr);
-		vkFreeMemory(device->logicalDevice, vertices.memory, nullptr);
-		vkDestroyBuffer(device->logicalDevice, indices.buffer, nullptr);
-		vkFreeMemory(device->logicalDevice, indices.memory, nullptr);*/
+		
+		//vkDestroyBuffer(device->logicalDevice, vertices.buffer, nullptr);
+		//vkFreeMemory(device->logicalDevice, vertices.memory, nullptr);
+		//vkDestroyBuffer(device->logicalDevice, indices.buffer, nullptr);
+		//vkFreeMemory(device->logicalDevice, indices.memory, nullptr);
 		
 	}
 

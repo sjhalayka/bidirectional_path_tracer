@@ -902,7 +902,7 @@ void main()
 		gl_LaunchSizeEXT.x,
 		gl_LaunchSizeEXT.y);
 
-	float focal_distance = 6.0;
+	float focal_distance = 1.0;
 	vec4 focal_point_bootstrap = origin + normalize(direction) * focal_distance;
 	vec4 focal_point_on_plane = vec4(plane_ray_intersection(focal_point_bootstrap.xyz, (origin - focal_point_bootstrap).xyz, origin.xyz, direction.xyz), 0.0);
 	

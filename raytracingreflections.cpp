@@ -820,7 +820,7 @@ public:
 				//getAssetPath() + "models/reflection_scene.gltf",
 				//"C:/temp/rob_rau_cornell/gltf/cornell.gltf",
 				//"C:/temp/rob_rau_cornell/simple_building/simple_building.gltf",
-				"C:/temp/rob_rau_cornell/bunny2/bunny2.gltf",
+				"C:/temp/rob_rau_cornell/bunny2/bunny_array.gltf",
 				//"C:/temp/rob_rau_cornell/prism3/cornell_prism3.gltf",
 				//"C:/temp/rob_rau_cornell/barrel/barrel.gltf",
 				tri_count,
