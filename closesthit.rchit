@@ -47,6 +47,7 @@ struct Vertex
   vec4 color;
   vec4 _pad0; 
   vec4 _pad1;
+  vec4 _pad2;
 };
 
 Vertex unpack(uint index)

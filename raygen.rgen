@@ -8,6 +8,8 @@ layout(binding = 0, set = 1) uniform sampler2D baseColorSampler;
 layout(binding = 1, set = 1) uniform sampler2D normalSampler;
 
 
+layout(location = 2) rayPayloadEXT bool shadowed;
+
 
 
 
@@ -131,39 +133,6 @@ layout(location = 0) rayPayloadEXT RayPayload rayPayload;
 // Max. number of recursion is passed via a specialization constant
 layout (constant_id = 0) const int MAX_RECURSION = 0;
 const int buffer_size = 8;
-const int max_bounces = 25;
-
-
-
-
-struct Vertex
-{
-  vec3 pos;
-  vec3 normal;
-  vec2 uv;
-  vec4 color;
-  vec4 _pad0; 
-  vec4 _pad1;
-  vec4 _pad2;
-};
-
-Vertex unpack(uint index)
-{
-	// Unpack the vertices from the SSBO using the glTF vertex structure
-	const int m = ubo.vertexSize / 24;
-
-	vec4 d0 = vertices.v[m * index + 0];
-	vec4 d1 = vertices.v[m * index + 1];
-	vec4 d2 = vertices.v[m * index + 2];
-
-	Vertex v;
-	v.pos = d0.xyz;
-	v.normal = vec3(d0.w, d1.x, d1.y);
-	v.uv = vec2(d1.z, d1.w);
-	v.color = vec4(d2.x, d2.y, d2.z, 1.0);
-
-	return v;
-}
 
 
 
@@ -226,142 +195,6 @@ vec3 cosWeightedRandomHemisphereDirection( const vec3 n, inout uint state )
     
     return normalize( rr );
 }
-
-
-
-
-void get_triangle_vertices_by_light_index(inout Vertex v0, inout Vertex v1, inout Vertex v2, uint index)
-{
-	uint first_index = 3*index;
-
-	uint index_0 = indices.i[first_index + 0];
-	uint index_1 = indices.i[first_index + 1];
-	uint index_2 = indices.i[first_index + 2];
-		
-	v0 = unpack(index_0);
-	v1 = unpack(index_1);
-	v2 = unpack(index_2);
-}
-
-vec3 get_normal_by_light_index(uint index)
-{
-	uint first_index = 3*index;
-
-	uint index_0 = indices.i[first_index + 0];
-	uint index_1 = indices.i[first_index + 1];
-	uint index_2 = indices.i[first_index + 2];
-		
-	Vertex v0 = unpack(index_0);
-	Vertex v1 = unpack(index_1);
-	Vertex v2 = unpack(index_2);
-
-	vec3 ba = v1.pos - v0.pos;
-	vec3 ca = v2.pos - v0.pos;	
-	vec3 tri_cross = cross(ba, ca);
-
-	vec3 normal = normalize(tri_cross);
-
-	return normal;
-}
-
-float get_area_by_light_index(uint index)
-{
-	uint first_index = 3*index;
-
-	uint index_0 = indices.i[first_index + 0];
-	uint index_1 = indices.i[first_index + 1];
-	uint index_2 = indices.i[first_index + 2];
-
-	Vertex v0 = unpack(index_0);
-	Vertex v1 = unpack(index_1);
-	Vertex v2 = unpack(index_2);
-
-	vec3 ba = v1.pos - v0.pos;
-	vec3 ca = v2.pos - v0.pos;
-	vec3 tri_cross = -cross(ba, ca);
-
-	float area = 0.5*length(tri_cross);
-
-	return area;
-}
-
-
-layout(location = 2) rayPayloadEXT bool shadowed;
-
-
-bool is_clear_line_of_sight_experimental(vec3 pos_start, const vec3 pos_end)
-{
-	shadowed = true; // Make sure to set this to the default before tracing the ray!
-//	traceRayEXT(topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT, 0xFF, 0, 0, 1, pos_start, 0.001, normalize(pos_end - pos_start), 10000.0, 2);
-	traceRayEXT(topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT, 0xFF, 0, 0, 1, pos_start, 0.001, normalize(pos_end), 10000.0, 2);
-	
-	/*
-	if(rayPayload.dist == -1)
-		return true;
-
-	vec3 hitPos = pos_start + pos_end * rayPayload.dist;
-
-	if(distance(hitPos, pos_end) < 0.001)
-		return true;
-*/
-
-	return !shadowed;
-}
-
-
-bool is_clear_line_of_sight(vec3 pos_start, const vec3 pos_end)
-{
-	RayPayload r = rayPayload;
-
-	traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, pos_start, 0.001, normalize(pos_end), 10000.0, 0);
-
-	if(rayPayload.dist == -1)
-	{
-		rayPayload = r;
-		return true;
-	}
-
-	vec3 hitPos = pos_start + pos_end * rayPayload.dist;
-
-	if(distance(hitPos, pos_end) < 0.0001)
-	{
-		rayPayload = r;
-		return true;
-	}
-
-	rayPayload = r;
-	return false;
-}
-
-
-// https://stackoverflow.com/questions/19654251/random-point-inside-triangle-inside-java
-// https://math.stackexchange.com/questions/538458/how-to-sample-points-on-a-triangle-surface-in-3d
-vec3 getRandomPointOnTriangle(vec3 A, vec3 B, vec3 C)
-{
-	float r1 = stepAndOutputRNGFloat(prng_state);
-	float r2 = stepAndOutputRNGFloat(prng_state);
-
-	float sqrtR1 = sqrt(r1);
-
-	return (1 - sqrtR1) * A + (sqrtR1 * (1 - r2)) * B + (sqrtR1 * r2) * C;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -488,7 +321,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 		}
 	}
 
-	return ret_colour / total;//(mask.r + mask.g + mask.b);
+	return ret_colour / total;
 }
 
 
@@ -520,24 +353,6 @@ float get_omni_radiance_backward(const int samples, const int steps, const vec3 
 
 	return ret_colour / samples;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -935,11 +750,11 @@ void main()
 
 
 	// Do pseudorandom depth of field (DOF) rays
-	float focal_distance = 6.0;
-	vec4 focal_point_bootstrap = origin + normalize(direction) * focal_distance;
-	vec4 focal_point_on_plane = vec4(plane_ray_intersection(focal_point_bootstrap.xyz, (origin - focal_point_bootstrap).xyz, origin.xyz, direction.xyz), 0.0);
+	const float focal_distance = 6.0;
+	const vec4 focal_point_bootstrap = origin + normalize(direction) * focal_distance;
+	const vec4 focal_point_on_plane = vec4(plane_ray_intersection(focal_point_bootstrap.xyz, (origin - focal_point_bootstrap).xyz, origin.xyz, direction.xyz), 0.0);
 	
-	const int DOF_samples = 4;
+	const int DOF_samples = 0;
 
 	for(int s = 0; s < DOF_samples; s++)
 	{
