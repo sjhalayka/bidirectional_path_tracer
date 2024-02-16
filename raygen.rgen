@@ -778,6 +778,7 @@ void main()
 	
 
 	color /= total;
+	
 	//color = pow(color, vec3(1.0/2.2));
 
 	imageStore(color_image, ivec2(gl_LaunchIDEXT.xy), vec4(color, 1.0));

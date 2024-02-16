@@ -124,8 +124,7 @@ void main()
 		rayPayload.color.g = 0.5;
 		rayPayload.color.b = 0.0;
 		rayPayload.opacity = 1.0;
-		rayPayload.reflector = 0.5;
-
+		rayPayload.reflector = 1.0;
 	}
 	
 }
