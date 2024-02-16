@@ -120,9 +120,13 @@ void main()
 	// Make the transparent sphere reflective
 	if(rayPayload.opacity == 0.0)
 	{
-		rayPayload.opacity = 0.0;
-		rayPayload.reflector = 0.99;
-		
+	//	rayPayload.opacity = 0.01;
+		rayPayload.reflector = 1.0;
+
+		rayPayload.color.r = 0.0;
+		rayPayload.color.g = 0.2;
+		rayPayload.color.b = 0.0;
+
 		//rayPayload.tint = 0.5;
 		//rayPayload.tint_colour = vec3(0, 0.5, 1);
 		//rayPayload.color = rayPayload.tint_colour;
@@ -130,8 +134,8 @@ void main()
 
 	if(rayPayload.reflector == 1.0)
 	{
-//		rayPayload.color.r = 1.0;
-//		rayPayload.color.g = 0.5;
+	//	rayPayload.color.r = 1.0;
+	//	rayPayload.color.g = 0.5;
 	//	rayPayload.color.b = 0.0;
 	//	rayPayload.opacity = 0.75;
 		//rayPayload.reflector = 0.25;

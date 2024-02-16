@@ -215,7 +215,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 	vec3 d = direction;
 
 	const float energy = 25.0;
-	const float caustic_energy = energy;
+	const float caustic_energy = 1;//energy;
 
 	float ret_colour = 0;
 	float local_colour = energy;
@@ -461,7 +461,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				used_count++;
 
 				if(ubo.screenshot_mode)
-					rays[i].base_color = get_radiance_backward(100, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+					rays[i].base_color = get_radiance_backward(1000, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 				else
 					rays[i].base_color = get_radiance_backward(250, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 
