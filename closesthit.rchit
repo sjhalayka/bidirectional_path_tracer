@@ -97,9 +97,9 @@ void main()
 	
 	if(rayPayload.color.r == 1.0 && rayPayload.color.g == 1.0 && rayPayload.color.b == 1.0)
 	{
-//		rayPayload.color.r = 1000;
-//		rayPayload.color.g = 1000;
-//		rayPayload.color.b = 1000;
+		rayPayload.color.r = 15;
+		rayPayload.color.g = 15;
+		rayPayload.color.b = 15;
 
 		//if(ubo.fog_mode)
 			//rayPayload.reflector = 1.0;
@@ -120,11 +120,12 @@ void main()
 	// Make the transparent sphere reflective
 	if(rayPayload.opacity == 0.0)
 	{
-		//rayPayload.color.r = 1.0;
-		//rayPayload.color.g = 0.5;
-		//rayPayload.color.b = 0.0;
-		//rayPayload.opacity = 0.0;
+		rayPayload.opacity = 0.0;
 		rayPayload.reflector = 0.99;
+		
+		//rayPayload.tint = 0.5;
+		//rayPayload.tint_colour = vec3(0, 0.5, 1);
+		//rayPayload.color = rayPayload.tint_colour;
 	}
 
 	if(rayPayload.reflector == 1.0)
@@ -135,8 +136,9 @@ void main()
 	//	rayPayload.opacity = 0.75;
 		//rayPayload.reflector = 0.25;
 
-		rayPayload.tint = 0.75;
-		rayPayload.tint_colour = vec3(1, 0.5, 0.0);
+		//rayPayload.tint = 1.0;
+		//rayPayload.tint_colour = vec3(1, 0.5, 0.0);
+		//rayPayload.color = rayPayload.tint_colour;
 	}
 	
 }
