@@ -33,6 +33,9 @@ struct ray
 	float reflection_constant;
 	float refraction_constant;
 
+	float tint_constant;
+	vec3 tint_colour;
+
 	bool external_reflection_ray;
 	bool external_refraction_ray;
 
@@ -122,6 +125,8 @@ struct RayPayload
 	vec3 normal;
 	float reflector;
 	float opacity;
+	float tint;
+	vec3 tint_colour;
 };
 
 layout(location = 0) rayPayloadEXT RayPayload rayPayload;
@@ -171,12 +176,14 @@ float stepAndOutputRNGFloat(inout uint rngState)
 // 
 vec3 RandomUnitVector(inout uint state)
 {
-    float z = stepAndOutputRNGFloat(state) * 2.0f - 1.0f;
+
+float z = stepAndOutputRNGFloat(state) * 2.0f - 1.0f;
     float a = stepAndOutputRNGFloat(state) * TWO_PI;
     float r = sqrt(1.0f - z * z);
     float x = r * cos(a);
     float y = r * sin(a);
     return normalize(vec3(x, y, z));
+
 }
 
 // I forget where this came from
@@ -426,6 +433,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 		rays[i].external_refraction_ray = false;
 		rays[i].normal = vec3(0, 0, 0);
 		rays[i].depth = 0;
+		rays[i].tint_constant = 0;
+		rays[i].tint_colour = vec3(0, 0, 0);
 	}
 
 	rays[0].direction = direction;
@@ -465,6 +474,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				vec4 hitPos = rays[i].origin + rays[i].direction * rayPayload.dist;
 
 				rays[i].depth = distance(hitPos, rays[i].origin);
+				rays[i].tint_constant = rayPayload.tint;
+				rays[i].tint_colour = rayPayload.tint_colour;
 
 				// Do some fog in an AABB
 				float dist_color = 0.0;
@@ -672,7 +683,16 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 		{
 			accum = mix(rays[i].base_color, rays[rays[i].child_reflect_id].accumulated_color, rays[i].reflection_constant);
 		}
+
+		// Do tinting
+		const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
+
+		float t = rays[i].tint_colour.r*mask.r + rays[i].tint_colour.g*mask.g + rays[i].tint_colour.b*mask.b;
 		
+		float x = accum;
+		accum = mix(accum, t, rays[i].tint_constant);
+		accum = min(x, accum);
+
 		rays[i].accumulated_color = accum;
 	}
 	
