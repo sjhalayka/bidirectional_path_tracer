@@ -747,7 +747,7 @@ void main()
 	const float min_hue = rgb2hsv(vec3(1.0, 0.0, 0.0)).x; // red
 
 	const float max_eta = 0.95;
-	const float min_eta = 0.75;
+	const float min_eta = 0.95;
 
 	const float hue_diff = max_hue - min_hue;
 	const float hue_step_size = hue_diff / (channels - 1);

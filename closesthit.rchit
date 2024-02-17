@@ -120,20 +120,16 @@ void main()
 	// Make the transparent sphere reflective
 	if(rayPayload.opacity == 0.0)
 	{
-		rayPayload.opacity = 0.1;
+		//rayPayload.opacity = 0.1;
 		rayPayload.reflector = 1.0;
 
-		rayPayload.color.r = 0.0;
-		rayPayload.color.g = 0.2;
-		rayPayload.color.b = 0.0;
-
-		rayPayload.tint = 0.1;
-		rayPayload.tint_colour = vec3(1, 0, 0);
+		//rayPayload.tint = 0.1;
+		//rayPayload.tint_colour = vec3(1, 0, 0);
 
 		// Make sure to set the base colour when 
-		// casting caustics (where the object is
-		// transparent)
-		rayPayload.color = rayPayload.tint_colour;
+		// casting tinted caustics (where the object
+		// is transparent)
+		//rayPayload.color = rayPayload.tint_colour;
 	}
 
 	if(rayPayload.reflector == 1.0)
