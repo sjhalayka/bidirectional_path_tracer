@@ -693,8 +693,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 		float t = rays[i].tint_colour.r*mask.r + rays[i].tint_colour.g*mask.g + rays[i].tint_colour.b*mask.b;
 		
 		float x = accum;
-		accum = mix(accum, t, rays[i].tint_constant);
-		accum = min(x, accum);
+		accum = mix(x, t, 0);
+		//accum = min(x, accum);
 
 		rays[i].accumulated_color = accum;
 	}
@@ -747,7 +747,7 @@ void main()
 	const float min_hue = rgb2hsv(vec3(1.0, 0.0, 0.0)).x; // red
 
 	const float max_eta = 0.95;
-	const float min_eta = 0.95;
+	const float min_eta = 0.75;
 
 	const float hue_diff = max_hue - min_hue;
 	const float hue_step_size = hue_diff / (channels - 1);
@@ -806,5 +806,4 @@ void main()
 
 	imageStore(color_image, ivec2(gl_LaunchIDEXT.xy), vec4(color, 1.0));
 }
-
 
