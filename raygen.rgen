@@ -249,7 +249,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 		// If hit the sky
 		if(rayPayload.dist == -1.0)
 		{
-			ret_colour += local_colour;
+			//ret_colour += local_colour; // this causes bugs
 			break;
 		}
 
@@ -484,7 +484,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				float dist_color = 0.0;
 				float dist_opacity = 0.0;
 
-				if(false)//rays[i].external_reflection_ray || rays[i].external_refraction_ray)
+				if(rays[i].external_reflection_ray || rays[i].external_refraction_ray)
 				{
 					vec3 start = rays[i].origin.xyz;
 					vec3 end = rays[i].origin.xyz;
