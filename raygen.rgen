@@ -254,7 +254,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 		// If hit the sky
 		if(rayPayload.dist == -1.0)
 		{
-			//ret_colour += local_colour; // this causes bugs
+			ret_colour += local_colour; // this causes bugs
 			break;
 		}
 
