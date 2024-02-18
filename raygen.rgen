@@ -214,7 +214,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 	vec3 o = origin;
 	vec3 d = direction;
 
-	const float energy = 10.0;
+	const float energy = 1;
 	const float caustic_energy = 1;//energy;
 
 	float ret_colour = 0;

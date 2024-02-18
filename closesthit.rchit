@@ -100,7 +100,7 @@ void main()
 	if(rayPayload.opacity == 0.0)
 	{
 		rayPayload.opacity = 0.01;
-		rayPayload.reflector = 0.2;
+		rayPayload.reflector = 0.99;
 
 		rayPayload.tint = 1.0;
 		rayPayload.tint_colour = vec3(1,0,0);
