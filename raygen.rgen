@@ -246,42 +246,11 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 			local_colour *= (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
 		}
 
+		ret_colour = local_colour;
+
 		// If hit the sky
 		if(rayPayload.dist == -1.0)
-		{
-			//ret_colour += local_colour; // this causes bugs
 			break;
-		}
-
-		// If this is simply the final step
-		// then don't throw away perfectly 
-		// good data
-		if(i == steps - 1)
-		{
-			ret_colour += local_colour;
-			break;
-		}
-
-		// If hit a light
-		///if((rayPayload.color.r == 1 && 
-		//	rayPayload.color.g == 1 && 
-		//	rayPayload.color.b == 1)
-	//		||
-	//		(rayPayload.color.r == 1 && 
-	//		rayPayload.color.g == 0 && 
-	//		rayPayload.color.b == 0) 
-		//	||
-	//		(rayPayload.color.r == 0 && 
-	//		rayPayload.color.g == 78.0/255.0 && 
-	//		rayPayload.color.b == 255.0/255.0)
-//			)
-	//	{	
-			//ret_colour += local_colour;
-			//break;
-	//	}
-
-
-
 
 		vec3 hitPos = o + d * rayPayload.dist;
 

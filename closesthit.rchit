@@ -124,7 +124,7 @@ void main()
 		rayPayload.reflector = 0.99;
 
 		rayPayload.tint = 0.01;
-		rayPayload.tint_colour = vec3(1, 0, 0);
+		rayPayload.tint_colour = vec3(1, 1, 1);
 		rayPayload.color = rayPayload.tint_colour;
 	}
 
@@ -142,4 +142,3 @@ void main()
 	}
 	
 }
-
