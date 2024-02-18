@@ -215,7 +215,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 	vec3 d = direction;
 
 	const float energy = 25.0;
-	const float caustic_energy = 1;
+	const float caustic_energy = 10;//energy;
 
 	float ret_colour = 0;
 	float local_colour = energy;
@@ -232,29 +232,24 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 
 		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, tmin, d, tmax, 0);
 
-		if(doing_refraction_caustic == false)
+		total += mask.r;
+		total += mask.g;
+		total += mask.b;
+
+		if(doing_refraction_caustic)
 		{
-			local_colour *= (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
-		
-			total += mask.r;
-			total += mask.g;
-			total += mask.b;
+			local_colour += caustic_energy*(rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
+			doing_refraction_caustic = false;
 		}
 		else
 		{
-			local_colour *= caustic_energy*(rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
-
-			total += mask.r;// * caustic_energy;
-			total += mask.g;// * caustic_energy;
-			total += mask.b;// * caustic_energy;
-
-			doing_refraction_caustic = false;
+			local_colour *= (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
 		}
 
 		// If hit the sky
 		if(rayPayload.dist == -1.0)
 		{
-			ret_colour += local_colour; // this causes bugs
+			//ret_colour += local_colour; // this causes bugs
 			break;
 		}
 
@@ -266,6 +261,27 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 			ret_colour += local_colour;
 			break;
 		}
+
+		// If hit a light
+		///if((rayPayload.color.r == 1 && 
+		//	rayPayload.color.g == 1 && 
+		//	rayPayload.color.b == 1)
+	//		||
+	//		(rayPayload.color.r == 1 && 
+	//		rayPayload.color.g == 0 && 
+	//		rayPayload.color.b == 0) 
+		//	||
+	//		(rayPayload.color.r == 0 && 
+	//		rayPayload.color.g == 78.0/255.0 && 
+	//		rayPayload.color.b == 255.0/255.0)
+//			)
+	//	{	
+			//ret_colour += local_colour;
+			//break;
+	//	}
+
+
+
 
 		vec3 hitPos = o + d * rayPayload.dist;
 
@@ -730,7 +746,7 @@ void main()
 	const float max_hue = rgb2hsv(vec3(0.0, 0.0, 1.0)).x; // blue
 	const float min_hue = rgb2hsv(vec3(1.0, 0.0, 0.0)).x; // red
 
-	const float max_eta = 0.95;
+	const float max_eta = 0.75;
 	const float min_eta = 0.75;
 
 	const float hue_diff = max_hue - min_hue;
