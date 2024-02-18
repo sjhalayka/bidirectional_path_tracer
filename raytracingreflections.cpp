@@ -799,9 +799,6 @@ public:
 		vkglTF::descriptorBindingFlags = vkglTF::DescriptorBindingFlags::ImageBaseColor | vkglTF::DescriptorBindingFlags::ImageNormalMap;
 		const uint32_t glTFLoadingFlags = vkglTF::FileLoadingFlags::PreTransformVertices | vkglTF::FileLoadingFlags::PreMultiplyVertexColors | vkglTF::FileLoadingFlags::FlipY;
 
-		//scene.loadFromFile(getAssetPath() + "models/reflection_scene.gltf", vulkanDevice, queue, glTFLoadingFlags);
-
-
 
 
 
@@ -818,6 +815,8 @@ public:
 				vertexBuffer,
 				gltfimages,
 				"C:/temp/rob_rau_cornell/gltf/cornell.gltf",
+				//"C:/temp/rob_rau_cornell/circle_light/circle_light.gltf",
+				//"C:/temp/rob_rau_cornell/sphere_light/sphere_light.gltf",
 				//"C:/temp/rob_rau_cornell/simple_building/simple_building.gltf",
 				//"C:/temp/rob_rau_cornell/bunny2/bunny2.gltf",
 				//"C:/temp/rob_rau_cornell/bunny2/bunny_array.gltf",

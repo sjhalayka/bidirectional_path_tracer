@@ -95,11 +95,11 @@ void main()
 	rayPayload.tint = 0;
 	rayPayload.tint_colour = vec3(0, 0, 0);
 	
+	vec3 light_scale = 255.0*texture(normalSampler, uv).rgb;
+
 	if(rayPayload.color.r == 1.0 && rayPayload.color.g == 1.0 && rayPayload.color.b == 1.0)
 	{
-		rayPayload.color.r = 15;
-		rayPayload.color.g = 15;
-		rayPayload.color.b = 15;
+		light_scale = vec3(4,4,4);
 
 		//if(ubo.fog_mode)
 			//rayPayload.reflector = 1.0;
@@ -123,8 +123,8 @@ void main()
 	//	rayPayload.opacity = 0.01;
 		rayPayload.reflector = 0.99;
 
-		rayPayload.tint = 0.01;
-		rayPayload.tint_colour = vec3(1, 1, 1);
+		rayPayload.tint = 1.0;
+		rayPayload.tint_colour = vec3(1,0,0);
 		rayPayload.color = rayPayload.tint_colour;
 	}
 
@@ -141,4 +141,11 @@ void main()
 		//rayPayload.color = rayPayload.tint_colour;
 	}
 	
+	const float e_x = pow(2.0, light_scale.x);
+	const float e_y = pow(2.0, light_scale.y);
+	const float e_z = pow(2.0, light_scale.z);
+
+	rayPayload.color.r *= e_x;
+	rayPayload.color.g *= e_y;
+	rayPayload.color.b *= e_z;
 }
