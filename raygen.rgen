@@ -214,8 +214,8 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 	vec3 o = origin;
 	vec3 d = direction;
 
-	const float energy = 25.0;
-	const float caustic_energy = 10;//energy;
+	const float energy = 10.0;
+	const float caustic_energy = 1;//energy;
 
 	float ret_colour = 0;
 	float local_colour = energy;
@@ -679,8 +679,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 		
 			// Do tinting
 			const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
-
-			float t = rays[i].tint_colour.r*mask.r + rays[i].tint_colour.g*mask.g + rays[i].tint_colour.b*mask.b;
+			const float t = rays[i].tint_colour.r*mask.r + rays[i].tint_colour.g*mask.g + rays[i].tint_colour.b*mask.b;
 		
 			float x = refract_accum;
 			refract_accum = mix(x, t, rays[i].tint_constant);
@@ -693,8 +692,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 		{
 			// Do tinting
 			const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
-
-			float t = rays[i].tint_colour.r*mask.r + rays[i].tint_colour.g*mask.g + rays[i].tint_colour.b*mask.b;
+			const float t = rays[i].tint_colour.r*mask.r + rays[i].tint_colour.g*mask.g + rays[i].tint_colour.b*mask.b;
 		
 			float x = accum;
 			accum = mix(x, t, rays[i].tint_constant);
@@ -712,8 +710,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 		{
 			// Do tinting
 			const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
-
-			float t = rays[i].tint_colour.r*mask.r + rays[i].tint_colour.g*mask.g + rays[i].tint_colour.b*mask.b;
+			const float t = rays[i].tint_colour.r*mask.r + rays[i].tint_colour.g*mask.g + rays[i].tint_colour.b*mask.b;
 		
 			float x = accum;
 			accum = mix(x, t, rays[i].tint_constant);

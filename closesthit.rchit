@@ -95,33 +95,12 @@ void main()
 	rayPayload.tint = 0;
 	rayPayload.tint_colour = vec3(0, 0, 0);
 	
-	vec3 light_scale = 255.0*texture(normalSampler, uv).rgb;
-
-	if(rayPayload.color.r == 1.0 && rayPayload.color.g == 1.0 && rayPayload.color.b == 1.0)
-	{
-		light_scale = vec3(4,4,4);
-
-		//if(ubo.fog_mode)
-			//rayPayload.reflector = 1.0;
-
-		//rayPayload.opacity = 0.0;
-		//rayPayload.reflector = 0.0;
-
-	//	rayPayload.color.r = 1.0;
-	//	rayPayload.color.g = 0.5;
-	//	rayPayload.color.b = 0.0;
-	//	rayPayload.opacity = 0.01;
-	//	rayPayload.reflector = 0.99;
-	}
-
-
-
 
 	// Make the transparent sphere reflective
 	if(rayPayload.opacity == 0.0)
 	{
-	//	rayPayload.opacity = 0.01;
-		rayPayload.reflector = 0.99;
+		rayPayload.opacity = 0.01;
+		rayPayload.reflector = 0.2;
 
 		rayPayload.tint = 1.0;
 		rayPayload.tint_colour = vec3(1,0,0);
@@ -141,6 +120,8 @@ void main()
 		//rayPayload.color = rayPayload.tint_colour;
 	}
 	
+	vec3 light_scale = 255.0*texture(normalSampler, uv).rgb;
+
 	const float e_x = pow(2.0, light_scale.x);
 	const float e_y = pow(2.0, light_scale.y);
 	const float e_z = pow(2.0, light_scale.z);
