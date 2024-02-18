@@ -215,7 +215,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 	vec3 d = direction;
 
 	const float energy = 25.0;
-	const float caustic_energy = 1;//energy;
+	const float caustic_energy = 1;
 
 	float ret_colour = 0;
 	float local_colour = energy;
@@ -232,25 +232,40 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 
 		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, tmin, d, tmax, 0);
 
-		total += mask.r;
-		total += mask.g;
-		total += mask.b;
-
-		if(doing_refraction_caustic)
+		if(doing_refraction_caustic == false)
 		{
-			local_colour += caustic_energy*(rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
-			doing_refraction_caustic = false;
+			local_colour *= (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
+		
+			total += mask.r;
+			total += mask.g;
+			total += mask.b;
 		}
 		else
 		{
-			local_colour *= (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
-		}
+			local_colour *= caustic_energy*(rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
 
-		ret_colour = local_colour;
+			total += mask.r;// * caustic_energy;
+			total += mask.g;// * caustic_energy;
+			total += mask.b;// * caustic_energy;
+
+			doing_refraction_caustic = false;
+		}
 
 		// If hit the sky
 		if(rayPayload.dist == -1.0)
+		{
+			//ret_colour += local_colour; // this causes bugs
 			break;
+		}
+
+		// If this is simply the final step
+		// then don't throw away perfectly 
+		// good data
+		if(i == steps - 1)
+		{
+			ret_colour += local_colour;
+			break;
+		}
 
 		vec3 hitPos = o + d * rayPayload.dist;
 
@@ -453,7 +468,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				float dist_color = 0.0;
 				float dist_opacity = 0.0;
 
-				if(rays[i].external_reflection_ray || rays[i].external_refraction_ray)
+				if(false)//rays[i].external_reflection_ray || rays[i].external_refraction_ray)
 				{
 					vec3 start = rays[i].origin.xyz;
 					vec3 end = rays[i].origin.xyz;
