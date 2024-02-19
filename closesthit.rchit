@@ -113,6 +113,7 @@ void main()
 	//	rayPayload.color.g = 0.5;
 	//	rayPayload.color.b = 0.0;
 	//	rayPayload.opacity = 0.75;
+
 		//rayPayload.reflector = 0.25;
 
 		//rayPayload.tint = 1.0;
@@ -120,14 +121,23 @@ void main()
 		//rayPayload.color = rayPayload.tint_colour;
 	}
 	
-	// todo: make sure that light_scale is less than 128
+
+
+	// Do logarithmic lighting:
+	//
+	// Make sure that light_scale is equal to or less than 127.
+	// This is because a 4-byte float's maximum value is 2^127.
+	// This value should be zero for non-light triangles, and
+	// greater than zero for emissive triangles.
+	//
+	// The maximum value 2^127 is 1.7e+38, in base-10. 
+	// That's SUPER bright! No need for a double here (famous
+	// last words).
+	//
 	vec3 light_scale = 255.0*texture(normalSampler, uv).rgb;
+	light_scale = clamp(light_scale, 0.0, 127.0);
 
-	const float e_x = pow(2.0, light_scale.x);
-	const float e_y = pow(2.0, light_scale.y);
-	const float e_z = pow(2.0, light_scale.z);
-
-	rayPayload.color.r *= e_x;
-	rayPayload.color.g *= e_y;
-	rayPayload.color.b *= e_z;
+	rayPayload.color.r *= pow(2.0, light_scale.x);
+	rayPayload.color.g *= pow(2.0, light_scale.y);
+	rayPayload.color.b *= pow(2.0, light_scale.z);
 }

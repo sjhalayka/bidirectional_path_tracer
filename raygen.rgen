@@ -336,7 +336,7 @@ float get_omni_radiance_backward(const int samples, const int steps, const vec3 
 	float ret_colour = 0.0;
 
 	for(int s = 0; s < samples; s++)
-		ret_colour += trace_path_backward(steps, origin, RandomUnitVector(prng_state), hue, eta);;
+		ret_colour += trace_path_backward(steps, origin, RandomUnitVector(prng_state), hue, eta);
 
 	rayPayload = r;
 
