@@ -663,7 +663,6 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 			both = true;
 
 		float accum = 0.0;
-		bool did_tinted = false;
 
 		if(neither)
 		{
@@ -677,28 +676,10 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 			float reflect_accum = mix(rays[i].base_color, rays[rays[i].child_reflect_id].accumulated_color, rays[i].reflection_constant);
 			float refract_accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1.0 - rays[i].refraction_constant);
 		
-			// Do tinting
-			const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
-			const float t = rays[i].tint_colour.r*mask.r + rays[i].tint_colour.g*mask.g + rays[i].tint_colour.b*mask.b;
-		
-			float x = refract_accum;
-			refract_accum = mix(x, t, rays[i].tint_constant);
-			refract_accum = min(x, refract_accum);
-			did_tinted = true;
-
 			accum = mix(refract_accum, reflect_accum, ratio);
 		}
 		else if(pure_refraction)
 		{
-			// Do tinting
-			const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
-			const float t = rays[i].tint_colour.r*mask.r + rays[i].tint_colour.g*mask.g + rays[i].tint_colour.b*mask.b;
-		
-			float x = accum;
-			accum = mix(x, t, rays[i].tint_constant);
-			accum = min(x, accum);
-			did_tinted = true;
-
 			accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1.0 - rays[i].refraction_constant);	
 		}
 		else if(pure_reflection)
@@ -706,16 +687,15 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 			accum = mix(rays[i].base_color, rays[rays[i].child_reflect_id].accumulated_color, rays[i].reflection_constant);
 		}
 
-		if(did_tinted == false)
-		{
-			// Do tinting
-			const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
-			const float t = rays[i].tint_colour.r*mask.r + rays[i].tint_colour.g*mask.g + rays[i].tint_colour.b*mask.b;
-		
-			float x = accum;
-			accum = mix(x, t, rays[i].tint_constant);
-			accum = min(x, accum);
-		}
+
+		// Do tinting
+		const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
+		const float t = rays[i].tint_colour.r*mask.r + rays[i].tint_colour.g*mask.g + rays[i].tint_colour.b*mask.b;
+	
+		float x = accum;
+		accum = mix(x, t, rays[i].tint_constant);
+		accum = min(x, accum);
+
 
 		rays[i].accumulated_color = accum;
 	}
