@@ -393,7 +393,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 {
 	// This algorithm stops when the buffer runs out of space,
 	// or when the rays miss everything,
-	// or when the level is too deep
+	// or when the level is too deep.
 
 	ray rays[buffer_size];
 	int current_buffer_index = 0;

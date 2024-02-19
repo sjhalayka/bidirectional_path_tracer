@@ -16,7 +16,10 @@ struct RayPayload
 layout(location = 0) rayPayloadInEXT RayPayload rayPayload;
 layout(location = 2) rayPayloadEXT bool shadowed;
 
+// Contains RGB colour and opacity data
 layout(binding = 0, set = 1) uniform sampler2D baseColorSampler;
+
+// Contains RGB exponential lighting and reflectivity data
 layout(binding = 1, set = 1) uniform sampler2D normalSampler;
 
 hitAttributeEXT vec2 attribs;
@@ -99,12 +102,15 @@ void main()
 	// Make the transparent sphere reflective
 	if(rayPayload.opacity == 0.0)
 	{
-		rayPayload.opacity = 0.01;
-		rayPayload.reflector = 0.99;
+		rayPayload.color.r = 1.0;
+		rayPayload.color.g = 0.5;
+		rayPayload.color.b = 0.0;
+		rayPayload.opacity = 1.0;
+		rayPayload.reflector = 0.0;
 
-		rayPayload.tint = 1.0;
-		rayPayload.tint_colour = vec3(1,0,0);
-		rayPayload.color = rayPayload.tint_colour;
+		//rayPayload.tint = 1.0;
+		//rayPayload.tint_colour = vec3(1,0,0);
+		//rayPayload.color = rayPayload.tint_colour;
 	}
 
 	if(rayPayload.reflector == 1.0)
@@ -123,21 +129,20 @@ void main()
 	
 
 
-	// Do logarithmic lighting:
+	// Do base-2 exponential lighting using a texture:
 	//
 	// Make sure that light_scale is equal to or less than 127.
 	// This is because a 4-byte float's maximum value is 2^127.
 	// This value should be zero for non-light triangles, and
 	// greater than zero for emissive triangles.
 	//
-	// The maximum value 2^127 is 1.7e+38, in base-10. 
-	// That's SUPER bright! No need for a double here (famous
-	// last words).
+	// The maximum value 2^127 is like 10^38. That's SUPER bright!
+	// No need for a double here (famous last words).
 	//
 	vec3 light_scale = 255.0*texture(normalSampler, uv).rgb;
 	light_scale = clamp(light_scale, 0.0, 127.0);
 
-	rayPayload.color.r *= pow(2.0, light_scale.x);
-	rayPayload.color.g *= pow(2.0, light_scale.y);
-	rayPayload.color.b *= pow(2.0, light_scale.z);
+	rayPayload.color.r *= pow(2.0, light_scale.r);
+	rayPayload.color.g *= pow(2.0, light_scale.g);
+	rayPayload.color.b *= pow(2.0, light_scale.b);
 }
