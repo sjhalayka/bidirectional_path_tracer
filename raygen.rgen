@@ -249,7 +249,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 		// If hit the sky
 		if(rayPayload.dist == -1.0)
 		{
-			//ret_colour += local_colour; // this causes bugs
+			ret_colour += local_colour;
 			break;
 		}
 
@@ -261,27 +261,6 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 			ret_colour += local_colour;
 			break;
 		}
-
-		// If hit a light
-		///if((rayPayload.color.r == 1 && 
-		//	rayPayload.color.g == 1 && 
-		//	rayPayload.color.b == 1)
-	//		||
-	//		(rayPayload.color.r == 1 && 
-	//		rayPayload.color.g == 0 && 
-	//		rayPayload.color.b == 0) 
-		//	||
-	//		(rayPayload.color.r == 0 && 
-	//		rayPayload.color.g == 78.0/255.0 && 
-	//		rayPayload.color.b == 255.0/255.0)
-//			)
-	//	{	
-			//ret_colour += local_colour;
-			//break;
-	//	}
-
-
-
 
 		vec3 hitPos = o + d * rayPayload.dist;
 

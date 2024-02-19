@@ -102,7 +102,7 @@ void main()
 		rayPayload.opacity = 0.01;
 		rayPayload.reflector = 0.99;
 
-		rayPayload.tint = 0.9;
+		rayPayload.tint = 1.0;
 		rayPayload.tint_colour = vec3(1,0,0);
 		rayPayload.color = rayPayload.tint_colour;
 	}
@@ -120,6 +120,7 @@ void main()
 		//rayPayload.color = rayPayload.tint_colour;
 	}
 	
+	// todo: make sure that light_scale is less than 128
 	vec3 light_scale = 255.0*texture(normalSampler, uv).rgb;
 
 	const float e_x = pow(2.0, light_scale.x);
