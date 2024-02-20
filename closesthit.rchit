@@ -106,8 +106,8 @@ void main()
 		rayPayload.color.g = 1;
 		rayPayload.color.b = 1;
 
-		rayPayload.opacity = 0.1;
-		rayPayload.reflector = 0.1;//1;
+		rayPayload.opacity = 0.0;
+		rayPayload.reflector = 0.0;//1;
 
 		//rayPayload.tint = 1.0;
 		//rayPayload.tint_colour = vec3(1,0,0);
@@ -119,13 +119,13 @@ void main()
 	//	rayPayload.color.r = 1.0;
 	//	rayPayload.color.g = 0.5;
 	//	rayPayload.color.b = 0.0;
-	//	rayPayload.opacity = 0.75;
+		//rayPayload.opacity = 1.0;
 
-		//rayPayload.reflector = 0.25;
+		rayPayload.reflector = 1.0;
 
-		//rayPayload.tint = 1.0;
-		//rayPayload.tint_colour = vec3(1, 0.5, 0.0);
-		//rayPayload.color = rayPayload.tint_colour;
+		rayPayload.tint = 1.0;
+		rayPayload.tint_colour = vec3(1, 0.5, 0.0);
+		rayPayload.color = rayPayload.tint_colour;
 	}
 	
 
