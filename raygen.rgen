@@ -127,6 +127,7 @@ struct RayPayload
 	float opacity;
 	float tint;
 	vec3 tint_colour;
+	float subsurface;
 };
 
 layout(location = 0) rayPayloadEXT RayPayload rayPayload;

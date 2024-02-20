@@ -11,6 +11,7 @@ struct RayPayload
 	float opacity;
 	float tint;
 	vec3 tint_colour;
+	float subsurface;
 };
 
 layout(location = 0) rayPayloadInEXT RayPayload rayPayload;
@@ -102,9 +103,9 @@ void main()
 		rayPayload.opacity = 0.01;
 		rayPayload.reflector = 0.99;
 
-		rayPayload.tint = 1.0;
-		rayPayload.tint_colour = vec3(1,0,0);
-		rayPayload.color = rayPayload.tint_colour;
+		//rayPayload.tint = 1.0;
+		//rayPayload.tint_colour = vec3(1,0,0);
+		//rayPayload.color = rayPayload.tint_colour;
 	}
 
 	if(rayPayload.reflector == 1.0)
@@ -134,10 +135,10 @@ void main()
 	// That's SUPER bright! No need for a double here (famous
 	// last words).
 	//
-	vec3 light_scale = 255.0*texture(normalSampler, uv).rgb;
+	float light_scale = 255.0*texture(normalSampler, uv).r;
 	light_scale = clamp(light_scale, 0.0, 127.0);
+	rayPayload.color *= pow(2.0, light_scale);
 
-	rayPayload.color.r *= pow(2.0, light_scale.x);
-	rayPayload.color.g *= pow(2.0, light_scale.y);
-	rayPayload.color.b *= pow(2.0, light_scale.z);
+	// Do subsurface scattering coefficient
+	rayPayload.subsurface = 0.5;//texture(normalSampler, uv).g;
 }
