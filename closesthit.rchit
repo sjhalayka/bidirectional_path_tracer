@@ -124,7 +124,7 @@ void main()
 	
 
 
-	// Do logarithmic lighting:
+	// Do exponential lighting:
 	//
 	// Make sure that light_scale is equal to or less than 127.
 	// This is because a 4-byte float's maximum value is 2^127.
