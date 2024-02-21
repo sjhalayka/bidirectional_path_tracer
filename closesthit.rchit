@@ -96,7 +96,33 @@ void main()
 	rayPayload.normal = normalize(n.xyz);
 	rayPayload.tint = 0;
 	rayPayload.tint_colour = vec3(0, 0, 0);
+
+	// Do exponential lighting:
+	//
+	// Make sure that light_scale is equal to or less than 127.
+	// This is because a 4-byte float's maximum value is 2^127.
+	// This value should be zero for non-light triangles, and
+	// greater than zero for emissive triangles.
+	//
+	// The maximum value 2^127 is 1.7e+38, in base-10. 
+	// That's SUPER bright! No need for a double here (famous
+	// last words).
+	//
+	float light_scale = 255.0*texture(normalSampler, uv).r;
+	light_scale = clamp(light_scale, 0.0, 127.0);
+	rayPayload.color *= pow(2.0, light_scale);
+
+	// Do subsurface scattering coefficient and subsurface density
+	rayPayload.subsurface = 0.5;//texture(normalSampler, uv).g;
+	rayPayload.density = 0.5;//texture(normalSampler, uv).b;
+	
 	rayPayload.reflector = texture(normalSampler, uv).a;
+
+
+
+
+
+
 
 	// Make the transparent sphere reflective
 	if(rayPayload.opacity == 0.0)
@@ -125,23 +151,5 @@ void main()
 	
 
 
-	// Do exponential lighting:
-	//
-	// Make sure that light_scale is equal to or less than 127.
-	// This is because a 4-byte float's maximum value is 2^127.
-	// This value should be zero for non-light triangles, and
-	// greater than zero for emissive triangles.
-	//
-	// The maximum value 2^127 is 1.7e+38, in base-10. 
-	// That's SUPER bright! No need for a double here (famous
-	// last words).
-	//
-	float light_scale = 255.0*texture(normalSampler, uv).r;
-	light_scale = clamp(light_scale, 0.0, 127.0);
-	rayPayload.color *= pow(2.0, light_scale);
-
-	// Do subsurface scattering coefficient and subsurface density
-	rayPayload.subsurface = 0.5;//texture(normalSampler, uv).g;
-	rayPayload.density = 0.5;//texture(normalSampler, uv).b;
 
 }
