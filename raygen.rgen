@@ -272,10 +272,10 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 
 			vec3 o_scatter, d_scatter;
 
-			if(false)//stepAndOutputRNGFloat(prng_state) <= rayPayload.subsurface)
+			if(true)//stepAndOutputRNGFloat(prng_state) <= rayPayload.subsurface)
 			{
-				 o_scatter = hitPos.xyz - (rayPayload.normal * 0.01);// + (RandomUnitVector(prng_state)*0.01);// hitPos.xyz - rayPayload.normal * 0.001 + RandomUnitVector(prng_state)*0.001;//hitPos + rayPayload.normal * 0.01;
-				 d_scatter = RandomUnitVector(prng_state);//cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
+				 o_scatter = hitPos.xyz - (rayPayload.normal * 0.001) + (RandomUnitVector(prng_state)*0.001);// hitPos.xyz - rayPayload.normal * 0.001 + RandomUnitVector(prng_state)*0.001;//hitPos + rayPayload.normal * 0.01;
+				 d_scatter = RandomUnitVector(prng_state);
 			}
 			else
 			{
@@ -560,10 +560,10 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 						//generate new ray segment
 						
-						if(false)//true)// stepAndOutputRNGFloat(prng_state) <= rayPayload.subsurface)
+						if(true)// stepAndOutputRNGFloat(prng_state) <= rayPayload.subsurface)
 						{
-							rays[current_buffer_index].origin.xyz = hitPos.xyz - (rayPayload.normal * 0.01);// + (RandomUnitVector(prng_state)*0.01);// + rayPayload.normal * 0.01f;
-							rays[current_buffer_index].direction.xyz = RandomUnitVector(prng_state);//cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);//RandomUnitVector(prng_state);//cosWeightedRandomHemisphereDirection(-rayPayload.normal, prng_state);//reflect(rays[i].direction.xyz, rayPayload.normal);
+							rays[current_buffer_index].origin.xyz = hitPos.xyz - (rayPayload.normal * 0.001) + (RandomUnitVector(prng_state)*0.001);
+							rays[current_buffer_index].direction.xyz = RandomUnitVector(prng_state);
 						}
 						else
 						{
@@ -606,7 +606,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						if(temp_dir != vec3(0.0))
 						{
 							//generate new ray segment
-							rays[current_buffer_index].origin.xyz = mix(rays[i].origin.xyz, hitPos.xyz + rayPayload.normal * 0.01f, 1 - rayPayload.density);//hitPos.xyz + rayPayload.normal * 0.01f;
+							rays[current_buffer_index].origin.xyz = hitPos.xyz + rayPayload.normal * 0.01;
 							rays[current_buffer_index].direction.xyz = temp_dir;
 							rays[current_buffer_index].in_use = true;
 							rays[current_buffer_index].level = rays[i].level + 1;
