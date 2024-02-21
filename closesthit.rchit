@@ -113,7 +113,7 @@ void main()
 	rayPayload.color *= pow(2.0, light_scale);
 
 	// Do subsurface scattering coefficient and subsurface density
-	rayPayload.subsurface = 0.5;//texture(normalSampler, uv).g;
+	rayPayload.subsurface = 1.0;//texture(normalSampler, uv).g;
 	rayPayload.density = 1.0;//texture(normalSampler, uv).b;
 	
 	rayPayload.reflector = texture(normalSampler, uv).a;
@@ -143,9 +143,9 @@ void main()
 	//	rayPayload.color.g = 0.5;
 	//	rayPayload.color.b = 0.0;
 	
-		rayPayload.opacity = 0.1;
+		rayPayload.opacity = 1.0;
 		rayPayload.color = vec3(1,1,1);
-		rayPayload.reflector = 1.0;
+		rayPayload.reflector = 0.0;
 
 		//rayPayload.tint = 1.0;
 		//rayPayload.tint_colour = vec3(1, 0.5, 0.0);

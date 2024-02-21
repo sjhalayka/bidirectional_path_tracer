@@ -138,7 +138,7 @@ layout(location = 0) rayPayloadEXT RayPayload rayPayload;
 
 // Max. number of recursion is passed via a specialization constant
 layout (constant_id = 0) const int MAX_RECURSION = 0;
-const int buffer_size = 64;
+const int buffer_size = 8;
 
 
 
@@ -272,10 +272,10 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 
 			vec3 o_scatter, d_scatter;
 
-			if(stepAndOutputRNGFloat(prng_state) <= rayPayload.subsurface)
+			if(true)//stepAndOutputRNGFloat(prng_state) <= rayPayload.subsurface)
 			{
-				 o_scatter = hitPos.xyz - (1 - rayPayload.density)*(rayPayload.normal * 0.01) + (1 - rayPayload.density)*(RandomUnitVector(prng_state)*0.01);// hitPos.xyz - rayPayload.normal * 0.001 + RandomUnitVector(prng_state)*0.001;//hitPos + rayPayload.normal * 0.01;
-				 d_scatter = RandomUnitVector(prng_state);//cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
+				 o_scatter = hitPos.xyz - (rayPayload.normal * 0.01) - (RandomUnitVector(prng_state)*0.01);// hitPos.xyz - rayPayload.normal * 0.001 + RandomUnitVector(prng_state)*0.001;//hitPos + rayPayload.normal * 0.01;
+				 d_scatter = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
 			}
 			else
 			{
@@ -559,12 +559,11 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						rays[i].child_reflect_id = current_buffer_index;
 
 						//generate new ray segment
-
 						
-						if(stepAndOutputRNGFloat(prng_state) <= rayPayload.subsurface)
+						if(true)// stepAndOutputRNGFloat(prng_state) <= rayPayload.subsurface)
 						{
-							rays[current_buffer_index].origin.xyz = hitPos.xyz - (1 - rayPayload.density)*(rayPayload.normal * 0.01) + (1 - rayPayload.density)*(RandomUnitVector(prng_state)*0.01);// + rayPayload.normal * 0.01f;
-							rays[current_buffer_index].direction.xyz = RandomUnitVector(prng_state);//cosWeightedRandomHemisphereDirection(-rayPayload.normal, prng_state);//reflect(rays[i].direction.xyz, rayPayload.normal);
+							rays[current_buffer_index].origin.xyz = hitPos.xyz - (rayPayload.normal * 0.01) - (RandomUnitVector(prng_state)*0.01);// + rayPayload.normal * 0.01f;
+							rays[current_buffer_index].direction.xyz = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);//RandomUnitVector(prng_state);//cosWeightedRandomHemisphereDirection(-rayPayload.normal, prng_state);//reflect(rays[i].direction.xyz, rayPayload.normal);
 						}
 						else
 						{
@@ -572,11 +571,6 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 							rays[current_buffer_index].direction.xyz = reflect(rays[i].direction.xyz, rayPayload.normal);
 						}
 
-						//rays[current_buffer_index].origin.xyz = hitPos.xyz + rayPayload.normal * 0.01f;
-						//rays[current_buffer_index].direction.xyz = reflect(rays[i].direction.xyz, rayPayload.normal);
-					
-				
-						
 						rays[current_buffer_index].in_use = true;
 						rays[current_buffer_index].level = rays[i].level + 1;
 						rays[current_buffer_index].external_reflection_ray = true;
