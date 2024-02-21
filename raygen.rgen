@@ -4,9 +4,6 @@
 
 
 
-layout(binding = 0, set = 1) uniform sampler2D baseColorSampler;
-layout(binding = 1, set = 1) uniform sampler2D normalSampler;
-
 
 layout(location = 2) rayPayloadEXT bool shadowed;
 
@@ -32,6 +29,8 @@ struct ray
 
 	float reflection_constant;
 	float refraction_constant;
+	float sss_constant;
+	float density;
 
 	float tint_constant;
 	vec3 tint_colour;
@@ -128,6 +127,7 @@ struct RayPayload
 	float tint;
 	vec3 tint_colour;
 	float subsurface;
+	float density;
 };
 
 layout(location = 0) rayPayloadEXT RayPayload rayPayload;
@@ -519,7 +519,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 //							noise *= noise3(curr_step, 1.0/4.0);
 //							noise *= noise3(curr_step, 1.0/8.0);
 
-							colour *= noise;
+							//colour *= noise;
 
 							const float trans = 1.0 - clamp(dist_opacity, 0.0, 1.0);
 							dist_color += colour*trans;
@@ -538,6 +538,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				rays[i].normal = rayPayload.normal;				
 				rays[i].reflection_constant = rayPayload.reflector;
 				rays[i].refraction_constant = rayPayload.opacity;
+				rays[i].sss_constant = rayPayload.subsurface;
 
 				// entering mesh
 				if(dot(rays[i].direction.xyz, rayPayload.normal) <= 0.0)

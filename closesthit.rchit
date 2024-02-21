@@ -12,6 +12,7 @@ struct RayPayload
 	float tint;
 	vec3 tint_colour;
 	float subsurface;
+	float density;
 };
 
 layout(location = 0) rayPayloadInEXT RayPayload rayPayload;
@@ -19,6 +20,7 @@ layout(location = 2) rayPayloadEXT bool shadowed;
 
 layout(binding = 0, set = 1) uniform sampler2D baseColorSampler;
 layout(binding = 1, set = 1) uniform sampler2D normalSampler;
+//layout(binding = 2, set = 1) uniform sampler2D metallicSampler;
 
 hitAttributeEXT vec2 attribs;
 
@@ -89,13 +91,12 @@ void main()
 	vec4 n = normalize(ubo.transformation_matrix*vec4(normal, 0.0));
 
 	rayPayload.color = texture(baseColorSampler, uv).rgb;
+	rayPayload.opacity = texture(baseColorSampler, uv).a;
 	rayPayload.dist = gl_RayTmaxEXT;
 	rayPayload.normal = normalize(n.xyz);
-	rayPayload.reflector = texture(normalSampler, uv).a;
-	rayPayload.opacity = texture(baseColorSampler, uv).a;
 	rayPayload.tint = 0;
 	rayPayload.tint_colour = vec3(0, 0, 0);
-	
+	rayPayload.reflector = texture(normalSampler, uv).a;
 
 	// Make the transparent sphere reflective
 	if(rayPayload.opacity == 0.0)
@@ -139,6 +140,8 @@ void main()
 	light_scale = clamp(light_scale, 0.0, 127.0);
 	rayPayload.color *= pow(2.0, light_scale);
 
-	// Do subsurface scattering coefficient
+	// Do subsurface scattering coefficient and subsurface density
 	rayPayload.subsurface = 0.5;//texture(normalSampler, uv).g;
+	rayPayload.density = 0.5;//texture(normalSampler, uv).b;
+
 }
