@@ -22,10 +22,12 @@ struct ray
 
 	int child_refract_id;
 	int child_reflect_id;
+	int child_subsurface_id;
 	int parent_id;
 
 	float base_color;
 	float accumulated_color;
+	float subsurface_opacity;
 
 	float reflection_constant;
 	float refraction_constant;
@@ -210,7 +212,7 @@ vec3 cosWeightedRandomHemisphereDirection( const vec3 n, inout uint state )
 
 
 
-float trace_path_backward(const int steps, const vec3 origin, const vec3 direction, const float hue, const float eta)
+vec2 trace_path_backward(const int steps, const vec3 origin, const vec3 direction, const float hue, const float eta)
 {
 	vec3 o = origin;
 	vec3 d = direction;
@@ -221,6 +223,8 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 	float ret_colour = 0;
 	float local_colour = energy;
 	float total = 0;
+
+	float ret_opacity = 0;
 
 	bool doing_refraction_caustic = false;
 
@@ -236,6 +240,8 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 		total += mask.r;
 		total += mask.g;
 		total += mask.b;
+
+		ret_opacity += 0.01;//rayPayload.subsurface;
 
 		if(doing_refraction_caustic)
 		{
@@ -272,9 +278,9 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 
 			vec3 o_scatter, d_scatter;
 
-			if(true)//stepAndOutputRNGFloat(prng_state) <= rayPayload.subsurface)
+			if(stepAndOutputRNGFloat(prng_state) <= rayPayload.subsurface)
 			{
-				 o_scatter = hitPos.xyz - (rayPayload.normal * 0.001) + (RandomUnitVector(prng_state)*0.001);// hitPos.xyz - rayPayload.normal * 0.001 + RandomUnitVector(prng_state)*0.001;//hitPos + rayPayload.normal * 0.01;
+				 o_scatter = hitPos.xyz - (rayPayload.normal * 0.001) + (RandomUnitVector(prng_state)*0.001);
 				 d_scatter = RandomUnitVector(prng_state);
 			}
 			else
@@ -282,7 +288,6 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 				 o_scatter = hitPos + rayPayload.normal * 0.01;
 				 d_scatter = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
 			}
-
 
 			o = mix(o_scatter, o_reflect, rayPayload.reflector);
 			d = normalize(mix(d_scatter, d_reflect, rayPayload.reflector));
@@ -307,13 +312,13 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 				if(temp_dir != vec3(0.0))
 				{
 					o_transparent = hitPos.xyz + rayPayload.normal * 0.01f;
-					d_transparent = temp_dir;
+					d_transparent = mix(temp_dir, RandomUnitVector(prng_state), rayPayload.subsurface);
 				}
 				else
 				{
 					// Total internal reflection
 					o_transparent = hitPos.xyz - rayPayload.normal * 0.01f;
-					d_transparent = reflect(d, -rayPayload.normal);
+					d_transparent = mix(reflect(d, -rayPayload.normal), RandomUnitVector(prng_state), rayPayload.subsurface);
 				}
 			}
 
@@ -322,37 +327,47 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 		}
 	}
 
-	return ret_colour / total;
+	return vec2(ret_colour / total, ret_opacity / steps);
 }
 
 
-float get_radiance_backward(const int samples, const int steps, const vec3 origin, const vec3 seed_direction, const float hue, const float eta)
+vec2 get_radiance_backward(const int samples, const int steps, const vec3 origin, const vec3 seed_direction, const float hue, const float eta)
 {
 	RayPayload r = rayPayload;
 
 	float ret_colour = 0.0;
+	float ret_opacity = 0.0; 
 
 	for(int s = 0; s < samples; s++)
-		ret_colour += trace_path_backward(steps, origin, seed_direction, hue, eta);
+	{
+		vec2 ret = trace_path_backward(steps, origin, seed_direction, hue, eta);
+		ret_colour += ret.x;
+		ret_opacity += ret.y;
+	}
 
 	rayPayload = r;
 
-	return ret_colour / samples;
+	return vec2(ret_colour / samples, ret_opacity / samples);
 }
 
 
-float get_omni_radiance_backward(const int samples, const int steps, const vec3 origin, const float hue, const float eta)
+vec2 get_omni_radiance_backward(const int samples, const int steps, const vec3 origin, const float hue, const float eta)
 {
 	RayPayload r = rayPayload;
 
 	float ret_colour = 0.0;
+	float ret_opacity = 0.0;
 
 	for(int s = 0; s < samples; s++)
-		ret_colour += trace_path_backward(steps, origin, RandomUnitVector(prng_state), hue, eta);
+	{
+		vec2 ret = trace_path_backward(steps, origin, RandomUnitVector(prng_state), hue, eta);
+		ret_colour += ret.x;
+		ret_opacity += ret.y;
+	}
 
 	rayPayload = r;
 
-	return ret_colour / samples;
+	return vec2(ret_colour / samples, ret_opacity);
 }
 
 
@@ -401,7 +416,7 @@ void get_origin_and_direction(inout vec4 origin, inout vec4 direction, float x, 
 
 
 
-float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
+vec2 get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 {
 	// This algorithm stops when the buffer runs out of space,
 	// or when the rays miss everything,
@@ -422,6 +437,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 		rays[i].in_use = false;
 		rays[i].child_reflect_id = -1;
 		rays[i].child_refract_id = -1;
+		rays[i].child_subsurface_id = -1;
 		rays[i].parent_id = -1;
 		rays[i].external_reflection_ray = false;
 		rays[i].external_refraction_ray = false;
@@ -452,9 +468,17 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				used_count++;
 
 				if(ubo.screenshot_mode)
-					rays[i].base_color = get_radiance_backward(1000, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+				{
+					vec2 ret = get_radiance_backward(1000, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+					rays[i].base_color = ret.x;
+					rays[i].subsurface_opacity = 0.0;//ret.y;
+				}
 				else
-					rays[i].base_color = get_radiance_backward(250, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+				{
+					vec2 ret = get_radiance_backward(250, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+					rays[i].base_color = ret.x;
+					rays[i].subsurface_opacity = 0.0;//ret.y;
+				}
 
 				traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, rays[i].origin.xyz, tmin, rays[i].direction.xyz, tmax, 0);
 								
@@ -522,7 +546,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 						for(int j = 0; j < num_steps; j++, curr_step += step)
 						{
-							float colour = get_omni_radiance_backward(10, 5, curr_step, hue, eta);
+							vec2 ret = get_omni_radiance_backward(10, 5, curr_step, hue, eta);
+							float colour = ret.x;
 
 							float noise = noise3(curr_step, 1.0);
 
@@ -556,17 +581,19 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				{
 					if(current_buffer_index < buffer_size && rays[i].reflection_constant != 0.0)
 					{
-						rays[i].child_reflect_id = current_buffer_index;
+						
 
 						//generate new ray segment
 						
-						if(true)// stepAndOutputRNGFloat(prng_state) <= rayPayload.subsurface)
+						if(stepAndOutputRNGFloat(prng_state) <= rayPayload.subsurface)
 						{
+							rays[i].child_subsurface_id = current_buffer_index;
 							rays[current_buffer_index].origin.xyz = hitPos.xyz - (rayPayload.normal * 0.001) + (RandomUnitVector(prng_state)*0.001);
 							rays[current_buffer_index].direction.xyz = RandomUnitVector(prng_state);
 						}
 						else
 						{
+							rays[i].child_reflect_id = current_buffer_index;
 							rays[current_buffer_index].origin.xyz = hitPos.xyz + rayPayload.normal * 0.01f;
 							rays[current_buffer_index].direction.xyz = reflect(rays[i].direction.xyz, rayPayload.normal);
 						}
@@ -606,8 +633,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						if(temp_dir != vec3(0.0))
 						{
 							//generate new ray segment
-							rays[current_buffer_index].origin.xyz = hitPos.xyz + rayPayload.normal * 0.01;
-							rays[current_buffer_index].direction.xyz = temp_dir;
+							rays[current_buffer_index].origin.xyz = mix(rays[i].origin.xyz, hitPos.xyz + rayPayload.normal * 0.01, 1 - rayPayload.density);
+							rays[current_buffer_index].direction.xyz = mix(temp_dir, RandomUnitVector(prng_state), rayPayload.subsurface);
 							rays[current_buffer_index].in_use = true;
 							rays[current_buffer_index].level = rays[i].level + 1;
 							rays[current_buffer_index].external_reflection_ray = false;
@@ -620,8 +647,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 							// Total internal reflection
 
 							//generate new ray segment
-							rays[current_buffer_index].origin.xyz = hitPos.xyz - rayPayload.normal * 0.01f;
-							rays[current_buffer_index].direction.xyz = reflect(rays[i].direction.xyz, -rayPayload.normal);
+							rays[current_buffer_index].origin.xyz = mix(rays[i].origin.xyz, hitPos.xyz - rayPayload.normal * 0.01f, 1 - rayPayload.density);
+							rays[current_buffer_index].direction.xyz = mix(reflect(rays[i].direction.xyz, -rayPayload.normal), RandomUnitVector(prng_state), rayPayload.subsurface);
 							rays[current_buffer_index].in_use = true;
 							rays[current_buffer_index].level = rays[i].level + 1;
 							rays[current_buffer_index].external_reflection_ray = false;
@@ -664,6 +691,15 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 		if(rays[i].child_refract_id != -1 && rays[i].child_reflect_id != -1)
 			both = true;
 
+		bool has_subsurface = false;
+		float subsurface_accum = 0.0;
+
+		if(rays[i].child_subsurface_id != -1)
+		{
+			has_subsurface = true;
+			subsurface_accum = mix(rays[i].base_color, rays[rays[i].child_subsurface_id].accumulated_color, rays[i].subsurface_opacity);
+		}
+
 		float accum = 0.0;
 
 		if(neither)
@@ -672,12 +708,12 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 		}
 		else if(both)
 		{
-			// Fake the Fresnel refraction-reflection
-			const float ratio = 1.0 - dot(-normalize(rays[i].direction.xyz), rays[i].normal);
-
+		
 			float reflect_accum = mix(rays[i].base_color, rays[rays[i].child_reflect_id].accumulated_color, rays[i].reflection_constant);
 			float refract_accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1.0 - rays[i].refraction_constant);
-		
+
+			// Fake the Fresnel refraction-reflection
+			const float ratio = 1.0 - dot(-normalize(rays[i].direction.xyz), rays[i].normal);
 			accum = mix(refract_accum, reflect_accum, ratio);
 		}
 		else if(pure_refraction)
@@ -698,7 +734,10 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 		accum = mix(x, t, rays[i].tint_constant);
 		accum = min(x, accum);
 
-		rays[i].accumulated_color = accum;
+		if(has_subsurface)
+			rays[i].accumulated_color = mix( subsurface_accum, accum, 1 - rays[i].subsurface_opacity);//accum;
+		else
+			rays[i].accumulated_color = accum;
 	}
 	
 
@@ -713,7 +752,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 	//float s = 1.0 - float(current_buffer_index - 1) / float(buffer_size);
 	//return s;
 
-	return rays[0].accumulated_color;
+	return vec2(rays[0].accumulated_color, rays[0].subsurface_opacity);
 }
 
 
@@ -766,7 +805,8 @@ void main()
 
 	for(int c = 0; c < channels; c++, curr_hue += hue_step_size, curr_eta += eta_step_size)
 	{
-		const float f = get_ray0(origin, direction, curr_hue, curr_eta);
+		vec2 ret = get_ray0(origin, direction, curr_hue, curr_eta);
+		const float f = ret.x;
 		const vec3 mask = hsv2rgb(vec3(curr_hue, 1.0, 1.0));
 
 		total += mask;
@@ -793,7 +833,9 @@ void main()
 
 		for(int c = 0; c < channels; c++, curr_hue += hue_step_size, curr_eta += eta_step_size)
 		{
-			const float f = get_ray0(rand_origin, rand_direction, curr_hue, curr_eta);
+			vec2 ret = get_ray0(rand_origin, rand_direction, curr_hue, curr_eta);
+
+			const float f = ret.x;
 			const vec3 mask = hsv2rgb(vec3(curr_hue, 1.0, 1.0));
 
 			total += mask;
