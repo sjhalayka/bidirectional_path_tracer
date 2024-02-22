@@ -559,16 +559,20 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 					if(current_buffer_index < buffer_size && rays[i].reflection_constant != 0.0)
 					{
 						rays[i].child_reflect_id = current_buffer_index;
-
+						
 						//generate new ray segment
 						
 						if(stepAndOutputRNGFloat(prng_state) <= rayPayload.subsurface)
 						{
 							rays[current_buffer_index].origin.xyz = hitPos.xyz;// - (rayPayload.normal * 0.001) + (RandomUnitVector(prng_state)*0.001);
 							rays[current_buffer_index].direction.xyz = RandomUnitVector(prng_state);
+						
+							rays[i].base_opacity = 0.0;
 						}
 						else
 						{
+							rays[i].base_opacity = 1.0;
+
 							rays[current_buffer_index].origin.xyz = hitPos.xyz;// + rayPayload.normal * 0.01f;
 							rays[current_buffer_index].direction.xyz = reflect(rays[i].direction.xyz, rayPayload.normal);
 						}
@@ -607,7 +611,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 						if(temp_dir != vec3(0.0))
 						{
-							rays[i].base_opacity = 0.1;
+							rays[i].base_opacity = 0.01;
 
 							//generate new ray segment
 							rays[current_buffer_index].origin.xyz = mix(rays[i].origin.xyz + normalize(rays[i].direction.xyz)*0.1, hitPos.xyz, 1 - rayPayload.density);// hitPos.xyz + rayPayload.normal * 0.01;
@@ -621,7 +625,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						}
 						else
 						{
-							rays[i].base_opacity = 0.1;
+							rays[i].base_opacity = 0.01;
 
 							// Total internal reflection
 
@@ -683,9 +687,11 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 			float reflect_accum = mix(rays[i].base_color, rays[rays[i].child_reflect_id].accumulated_color, rays[i].reflection_constant);
 			float refract_accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1.0 - rays[i].refraction_constant);
-		
-			//refract_accum = mix(rays[rays[i].child_refract_id].accumulated_color, refract_accum, rays[i].base_opacity);
+			
+//			rays[i].base_opacity = clamp(rays[i].base_opacity, 0, 1);
 
+//			if(rays[i].base_opacity < 1)
+//				reflect_accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, rays[i].base_opacity);
 
 			accum = mix(refract_accum, reflect_accum, ratio);
 		}
@@ -707,12 +713,9 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 		accum = mix(x, t, rays[i].tint_constant);
 		accum = min(x, accum);
 
-
-	
-
-		rays[i].accumulated_color = accum;//mix(rays[i].base_color, accum, rays[i].base_opacity);
+		rays[i].accumulated_color = accum;
 	}
-	
+
 
 
 
