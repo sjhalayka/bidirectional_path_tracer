@@ -111,14 +111,14 @@ void main()
 	float light_scale = 255.0*texture(normalSampler, uv).r;
 	light_scale = clamp(light_scale, 0.0, 127.0);
 	
-	if(light_scale > 0)
+	//if(light_scale > 0)
 	//light_scale = 4; // for debuggin purposes
 	
 	rayPayload.color *= pow(2.0, light_scale);
 
 
 	// Do subsurface scattering coefficient and subsurface density
-	rayPayload.subsurface = 0.0;//texture(normalSampler, uv).g;
+	rayPayload.subsurface = 1.0;//texture(normalSampler, uv).g;
 	rayPayload.density = 0.0;//texture(normalSampler, uv).b;
 	
 	rayPayload.reflector = texture(normalSampler, uv).a;
@@ -127,7 +127,7 @@ void main()
 	if(rayPayload.opacity == 0.0)
 	{
 		rayPayload.opacity = 0.0;
-		rayPayload.reflector = 0.99;
+		rayPayload.reflector = 0.0;
 
 		rayPayload.color = vec3(1,1,1);
 
