@@ -123,12 +123,6 @@ void main()
 	
 	rayPayload.reflector = texture(normalSampler, uv).a;
 
-
-
-
-
-
-
 	// Make the transparent sphere reflective
 	if(rayPayload.opacity == 0.0)
 	{
