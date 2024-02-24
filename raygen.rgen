@@ -401,6 +401,80 @@ void get_origin_and_direction(inout vec4 origin, inout vec4 direction, float x, 
 
 
 
+
+void do_fog(inout float dist_color, inout float dist_opacity, vec3 origin, vec3 direction, vec3 hitPos, vec3 normal, float hue, float eta)
+{
+
+					vec3 start = origin;
+					vec3 end = origin;
+
+					float t0 = 0.0;
+					float t1 = 0.0;
+					const float target_step_length = 0.1;
+
+					if(in_aabb(origin, aabb_min, aabb_max))
+					{
+						vec3 backout_pos = origin - direction*10000.0;
+
+						if(BBoxIntersect(aabb_min, aabb_max, backout_pos, direction, t0, t1))
+						{
+							start = origin;//backout_pos + direction*t0;
+							end = backout_pos + direction*t1;
+						}
+					}
+					else
+					{
+						if(BBoxIntersect(aabb_min, aabb_max, origin.xyz, direction, t0, t1))
+						{
+							start = origin + direction*t0;
+							end = origin + direction*t1;
+						}
+					}
+
+					if(true)//rayPayload.dist != -1.0)
+					{
+						if(distance(origin, start) > distance(origin, hitPos.xyz))
+							start = hitPos.xyz + normal * 0.01f;
+					
+						if(distance(origin, end) > distance(origin, hitPos.xyz))
+							end = hitPos.xyz + normal * 0.01f;
+					}
+
+					const int num_steps = int(floor((distance(start, end) / target_step_length)));
+
+					if(num_steps >= 2)
+					{
+						const vec3 step = (end - start) / (num_steps - 1);
+
+						vec3 curr_step = start;
+
+						for(int j = 0; j < num_steps; j++, curr_step += step)
+						{
+							float colour = get_omni_radiance_backward(10, 5, curr_step, hue, eta);
+
+							float noise = noise3(curr_step, 1.0);
+
+//							noise *= noise3(curr_step, 1.0/2.0);
+//							noise *= noise3(curr_step, 1.0/4.0);
+//							noise *= noise3(curr_step, 1.0/8.0);
+
+							//colour *= noise;
+
+							const float trans = 1.0 - clamp(dist_opacity, 0.0, 1.0);
+							dist_color += colour*trans;
+							dist_opacity += 0.1*colour*trans;
+						}
+					}
+
+					const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
+					dist_color *= (fog_colour.r*mask.r + fog_colour.g*mask.g + fog_colour.b*mask.b);
+}
+
+
+
+
+
+
 bool is_inside_mesh(const vec3 location)
 {
 	RayPayload r = rayPayload;
@@ -446,6 +520,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 		rays[i].depth = 0;
 		rays[i].tint_constant = 0;
 		rays[i].tint_colour = vec3(0, 0, 0);
+
+		rays[i].base_opacity = 0.0;
 	}
 
 	rays[0].direction = direction;
@@ -487,87 +563,21 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				rays[i].depth = distance(hitPos, rays[i].origin);
 				rays[i].tint_constant = rayPayload.tint;
 				rays[i].tint_colour = rayPayload.tint_colour;
-
-				// Do some fog in an AABB
-				float dist_color = 0.0;
-				float dist_opacity = 0.0;
-
-				if(false)//rays[i].external_reflection_ray || rays[i].external_refraction_ray)
-				{
-					vec3 start = rays[i].origin.xyz;
-					vec3 end = rays[i].origin.xyz;
-
-					float t0 = 0.0;
-					float t1 = 0.0;
-					const float target_step_length = 0.1;
-
-					if(in_aabb(rays[i].origin.xyz, aabb_min, aabb_max))
-					{
-						vec3 backout_pos = rays[i].origin.xyz - rays[i].direction.xyz*10000.0;
-
-						if(BBoxIntersect(aabb_min, aabb_max, backout_pos, rays[i].direction.xyz, t0, t1))
-						{
-							start = rays[i].origin.xyz;//backout_pos + rays[i].direction.xyz*t0;
-							end = backout_pos + rays[i].direction.xyz*t1;
-						}
-					}
-					else
-					{
-						if(BBoxIntersect(aabb_min, aabb_max, rays[i].origin.xyz, rays[i].direction.xyz, t0, t1))
-						{
-							start = rays[i].origin.xyz + rays[i].direction.xyz*t0;
-							end = rays[i].origin.xyz + rays[i].direction.xyz*t1;
-						}
-					}
-
-					if(true)//rayPayload.dist != -1.0)
-					{
-						if(distance(rays[i].origin.xyz, start) > distance(rays[i].origin.xyz, hitPos.xyz))
-							start = hitPos.xyz + rayPayload.normal * 0.01f;
-					
-						if(distance(rays[i].origin.xyz, end) > distance(rays[i].origin.xyz, hitPos.xyz))
-							end = hitPos.xyz + rayPayload.normal * 0.01f;
-					}
-
-					const int num_steps = int(floor((distance(start, end) / target_step_length)));
-
-					if(num_steps >= 2)
-					{
-						const vec3 step = (end - start) / (num_steps - 1);
-
-						vec3 curr_step = start;
-
-						for(int j = 0; j < num_steps; j++, curr_step += step)
-						{
-							float colour = get_omni_radiance_backward(10, 5, curr_step, hue, eta);
-
-							float noise = noise3(curr_step, 1.0);
-
-//							noise *= noise3(curr_step, 1.0/2.0);
-//							noise *= noise3(curr_step, 1.0/4.0);
-//							noise *= noise3(curr_step, 1.0/8.0);
-
-							//colour *= noise;
-
-							const float trans = 1.0 - clamp(dist_opacity, 0.0, 1.0);
-							dist_color += colour*trans;
-							dist_opacity += 0.1*colour*trans;
-						}
-					}
-
-					const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
-					dist_color *= (fog_colour.r*mask.r + fog_colour.g*mask.g + fog_colour.b*mask.b);
-				}
-
-				dist_color = clamp(dist_color, 0.0, 1.0);
-				dist_opacity = clamp(dist_opacity, 0.0, 1.0);
-				rays[i].base_color = mix(rays[i].base_color, dist_color, dist_opacity);
-
 				rays[i].normal = rayPayload.normal;				
 				rays[i].reflection_constant = rayPayload.reflector;
 				rays[i].refraction_constant = rayPayload.opacity;
 				rays[i].sss_constant = rayPayload.subsurface;
 				rays[i].sss_density = rayPayload.density;
+
+				// Do some fog in an AABB
+				float dist_color = 0.0;
+				float dist_opacity = 0.0;
+
+				//do_fog(dist_color, dist_opacity, rays[i].origin.xyz, rays[i].direction.xyz, hitPos.xyz, rays[i].normal, hue, eta);
+
+				dist_color = clamp(dist_color, 0.0, 1.0);
+				dist_opacity = clamp(dist_opacity, 0.0, 1.0);
+				rays[i].base_color = mix(rays[i].base_color, dist_color, dist_opacity);
 
 				// entering mesh
 				if(dot(rays[i].direction.xyz, rayPayload.normal) <= 0.0)
@@ -578,17 +588,18 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						
 						//generate new ray segment
 						
-						if(stepAndOutputRNGFloat(prng_state) <= rayPayload.subsurface)
+						if(	stepAndOutputRNGFloat(prng_state) <= rays[i].sss_constant)
 						{
+							// do random walk here to get base opacity
+
+							rays[i].base_opacity = 0.0;
 							rays[current_buffer_index].origin.xyz = hitPos.xyz - (rayPayload.normal * 0.001) + (RandomUnitVector(prng_state)*0.001);
 							rays[current_buffer_index].direction.xyz = RandomUnitVector(prng_state);
-						
-							rays[i].base_opacity = 0.0;
+					
 						}
 						else
 						{
 							rays[i].base_opacity = 1.0;
-
 							rays[current_buffer_index].origin.xyz = hitPos.xyz + rayPayload.normal * 0.01f;
 							rays[current_buffer_index].direction.xyz = reflect(rays[i].direction.xyz, rayPayload.normal);
 						}
@@ -629,11 +640,11 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 						if(temp_dir != vec3(0.0))
 						{
-							rays[i].base_opacity = 0.1;
- 
+							rays[i].base_opacity = 0.01;
+
 							//generate new ray segment
 							rays[current_buffer_index].origin.xyz = mix(rays[i].origin.xyz + normalize(rays[i].direction.xyz)*0.1, hitPos.xyz, 1 - rayPayload.density);// hitPos.xyz + rayPayload.normal * 0.01;
-							rays[current_buffer_index].direction.xyz = mix(temp_dir, RandomUnitVector(prng_state), rayPayload.subsurface);//temp_dir;
+							rays[current_buffer_index].direction.xyz = mix(temp_dir, RandomUnitVector(prng_state), rays[i].sss_constant);//temp_dir;
 							rays[current_buffer_index].in_use = true;
 							rays[current_buffer_index].level = rays[i].level + 1;
 							rays[current_buffer_index].external_reflection_ray = false;
@@ -643,13 +654,13 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						}
 						else
 						{
-							rays[i].base_opacity += 0.1;
+							rays[i].base_opacity = 1.0;
 
-							// Total internal reflection
+							// Total internal reflection. don't randomize this
 
 							//generate new ray segment
-							rays[current_buffer_index].origin.xyz = mix(rays[i].origin.xyz + normalize(rays[i].direction.xyz)*0.1, hitPos.xyz, 1 - rayPayload.density);//hitPos.xyz - rayPayload.normal * 0.01f;
-							rays[current_buffer_index].direction.xyz = mix(reflect(rays[i].direction.xyz, -rayPayload.normal), RandomUnitVector(prng_state), rayPayload.subsurface);//reflect(rays[i].direction.xyz, -rayPayload.normal);
+							rays[current_buffer_index].origin.xyz = hitPos.xyz - rayPayload.normal * 0.01f;//mix(rays[i].origin.xyz + normalize(rays[i].direction.xyz)*0.1, hitPos.xyz, 1 - rayPayload.density);//hitPos.xyz - rayPayload.normal * 0.01f;
+							rays[current_buffer_index].direction.xyz = reflect(rays[i].direction.xyz, -rayPayload.normal);//mix(reflect(rays[i].direction.xyz, -rayPayload.normal), RandomUnitVector(prng_state), rays[i].sss_constant);//reflect(rays[i].direction.xyz, -rayPayload.normal);
 							rays[current_buffer_index].in_use = true;
 							rays[current_buffer_index].level = rays[i].level + 1;
 							rays[current_buffer_index].external_reflection_ray = false;
@@ -706,15 +717,18 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 			float reflect_accum = mix(rays[i].base_color, rays[rays[i].child_reflect_id].accumulated_color, rays[i].reflection_constant);
 			float refract_accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1.0 - rays[i].refraction_constant);
 			
-			//rays[i].base_opacity = 0.0;//clamp(rays[i].base_opacity, 0, 1);
+			//rays[i].base_opacity = clamp(rays[i].base_opacity, 0, 1);
 
-			refract_accum = mix(rays[i].base_color, refract_accum, rays[i].base_opacity);
+			refract_accum = mix(rays[i].base_color, refract_accum, rays[i].base_opacity);//pow(rays[i].base_opacity, 1.0));
+//			reflect_accum = mix(rays[i].base_color, reflect_accum, rays[i].base_opacity);//pow(rays[i].base_opacity, 1.0));
 
 			accum = mix(refract_accum, reflect_accum, ratio);
 		}
 		else if(pure_refraction)
 		{
 			accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1.0 - rays[i].refraction_constant);	
+
+			accum = mix(rays[i].base_color, accum, rays[i].base_opacity);
 		}
 		else if(pure_reflection)
 		{
