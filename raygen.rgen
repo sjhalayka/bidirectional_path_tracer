@@ -401,23 +401,17 @@ void get_origin_and_direction(inout vec4 origin, inout vec4 direction, float x, 
 
 
 
-bool is_inside_mesh(vec3 origin, vec3 direction, vec3 normal)
+bool is_inside_mesh(const vec3 location)
 {
 	RayPayload r = rayPayload;
-
-	uint rayFlags = gl_RayFlagsOpaqueEXT;
-	uint cullMask = 0xff;
-	float tmin = 0.001;
-	float tmax = 10000.0;
-
-	traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, origin.xyz, tmin, direction.xyz, tmax, 0);
-								
 	bool is_outside = false;
 
-	if(rayPayload.dist == -1.0 || dot(direction, normal) <= 0.0)
+	const vec3 direction = vec3(0, 1, 0);
+
+	traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, location, 0.001, direction, 10000.0, 0);
+
+	if(rayPayload.dist == -1.0 || dot(direction, rayPayload.normal) <= 0.0)
 		is_outside = true;
-	else
-		is_outside = false;
 
 	rayPayload = r;
 	return !is_outside;
