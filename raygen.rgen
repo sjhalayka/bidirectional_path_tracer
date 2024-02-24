@@ -491,27 +491,22 @@ bool is_inside_mesh(const vec3 location)
 	return !is_outside;
 }
 
-void do_random_walk_until_exits_mesh(const int max_walk_length, vec3 pos, inout vec3 final_pos, inout float base_opacity)
+void do_random_walk_until_exits_mesh(const int max_walk_length, vec3 pos, inout vec3 final_pos, inout vec3 final_dir, inout float base_opacity)
 {
-	RayPayload r = rayPayload;
-
-	final_pos = vec3(0, 0, 0);
+	final_pos = pos;
+	final_dir = RandomUnitVector(prng_state);
 	base_opacity = 0.0;
-
 
 	int i = 0;
 
 	while(true == is_inside_mesh(pos) && i < max_walk_length)
 	{	
-		pos += RandomUnitVector(prng_state)*0.01;
-		base_opacity += 0.01;
+		final_dir = RandomUnitVector(prng_state);
+		final_pos += final_dir*0.001;
+		base_opacity += 0.001;
 
 		i++;
 	}
-
-	final_pos = pos;
-
-	rayPayload = r;
 }
 
 

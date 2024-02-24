@@ -118,7 +118,7 @@ void main()
 
 
 	// Do subsurface scattering coefficient and subsurface density
-	rayPayload.subsurface = 0.0;//texture(normalSampler, uv).g;
+	rayPayload.subsurface = 0.5;//texture(normalSampler, uv).g;
 	rayPayload.density = 0.0;//texture(normalSampler, uv).b;
 	
 	rayPayload.reflector = texture(normalSampler, uv).a;
