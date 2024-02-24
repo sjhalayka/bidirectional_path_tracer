@@ -401,6 +401,28 @@ void get_origin_and_direction(inout vec4 origin, inout vec4 direction, float x, 
 
 
 
+bool is_inside_mesh(vec3 origin, vec3 direction, vec3 normal)
+{
+	RayPayload r = rayPayload;
+
+	uint rayFlags = gl_RayFlagsOpaqueEXT;
+	uint cullMask = 0xff;
+	float tmin = 0.001;
+	float tmax = 10000.0;
+
+	traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, origin.xyz, tmin, direction.xyz, tmax, 0);
+								
+	bool is_outside = false;
+
+	if(rayPayload.dist == -1.0 || dot(direction, normal) <= 0.0)
+		is_outside = true;
+	else
+		is_outside = false;
+
+	rayPayload = r;
+	return !is_outside;
+}
+
 
 float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 {
@@ -589,6 +611,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 					{
 						rays[i].child_refract_id = current_buffer_index;
 
+						rays[i].base_opacity = 0.0;
+
 						//generate new ray segment
 						rays[current_buffer_index].origin.xyz = hitPos.xyz - rayPayload.normal * 0.01f;
 						rays[current_buffer_index].direction.xyz = refract(rays[i].direction.xyz, rayPayload.normal, eta);
@@ -611,7 +635,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 						if(temp_dir != vec3(0.0))
 						{
-							rays[i].base_opacity = 1.0;
+							rays[i].base_opacity = 0.1;
  
 							//generate new ray segment
 							rays[current_buffer_index].origin.xyz = mix(rays[i].origin.xyz + normalize(rays[i].direction.xyz)*0.1, hitPos.xyz, 1 - rayPayload.density);// hitPos.xyz + rayPayload.normal * 0.01;
@@ -625,7 +649,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						}
 						else
 						{
-							rays[i].base_opacity = 0.5;
+							rays[i].base_opacity += 0.1;
 
 							// Total internal reflection
 
@@ -690,7 +714,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 			
 			//rays[i].base_opacity = 0.0;//clamp(rays[i].base_opacity, 0, 1);
 
-			refract_accum = mix(rays[i].base_color, refract_accum, sqrt(rays[i].base_opacity));
+			refract_accum = mix(rays[i].base_color, refract_accum, rays[i].base_opacity);
 
 			accum = mix(refract_accum, reflect_accum, ratio);
 		}
