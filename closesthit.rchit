@@ -111,8 +111,8 @@ void main()
 	float light_scale = 255.0*texture(normalSampler, uv).r;
 	light_scale = clamp(light_scale, 0.0, 127.0);
 	
-	//if(light_scale > 0)
-	//light_scale = 4; // for debuggin purposes
+	if(light_scale > 0)
+	light_scale = 4; // for debuggin purposes
 	
 	rayPayload.color *= pow(2.0, light_scale);
 

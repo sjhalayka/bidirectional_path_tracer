@@ -758,8 +758,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 			if(rays[i].child_subsurface_id != -1)
 			{
-				float subsurface_accum = 1.0;//mix(reflect_accum, rays[rays[i].child_subsurface_id].accumulated_color, rays[i].sss_constant);
-				reflect_accum = mix(reflect_accum, subsurface_accum, rays[i].base_opacity);
+				float subsurface_accum = mix(refract_accum, rays[rays[i].child_subsurface_id].accumulated_color, rays[i].sss_constant);
+				refract_accum = mix(refract_accum, subsurface_accum, rays[i].base_opacity);
 			}
 
 
