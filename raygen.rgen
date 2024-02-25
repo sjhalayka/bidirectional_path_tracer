@@ -475,7 +475,7 @@ bool is_inside_mesh(const vec3 location)
 	RayPayload r = rayPayload;
 	bool is_outside = false;
 
-	const vec3 direction = RandomUnitVector(prng_state);//vec3(0, 1, 0);
+	const vec3 direction = vec3(0, 1, 0);
 
 	traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, location, 0.001, direction, 10000.0, 0);
 
@@ -494,10 +494,10 @@ int do_random_walk_until_exits_mesh(const float density, const int max_walk_leng
 
 	int i = 1;
 
-	while(true == is_inside_mesh(pos) && i <= max_walk_length)
+	while(is_inside_mesh(pos) && i <= max_walk_length)
 	{	
 		final_dir = RandomUnitVector(prng_state);
-		final_pos += final_dir*0.01;
+		final_pos += final_dir*(1 - density);
 		base_opacity += (1.0 - clamp(base_opacity, 0.0, 1.0))*density;
 
 		i++;
@@ -578,7 +578,15 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				rays[i].depth = distance(hitPos, rays[i].origin);
 				rays[i].tint_constant = rayPayload.tint;
 				rays[i].tint_colour = rayPayload.tint_colour;
+				rays[i].normal = rayPayload.normal;				
+				rays[i].reflection_constant = rayPayload.reflector;
+				rays[i].refraction_constant = rayPayload.opacity;
+				rays[i].sss_constant = rayPayload.subsurface;
+				rays[i].sss_density = rayPayload.density;
 
+
+
+				rays[i].base_opacity = 0.0;
 				// Do some fog in an AABB
 				//float dist_color = 0.0;
 				//float dist_opacity = 0.0;
@@ -589,12 +597,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 
 
-				rays[i].normal = rayPayload.normal;				
-				rays[i].reflection_constant = rayPayload.reflector;
-				rays[i].refraction_constant = rayPayload.opacity;
-				rays[i].sss_constant = rayPayload.subsurface;
-				rays[i].sss_density = rayPayload.density;
-				rays[i].base_opacity = 0.0;
+
 
 				// entering mesh
 				if(dot(rays[i].direction.xyz, rayPayload.normal) <= 0.0)
@@ -617,10 +620,10 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						current_buffer_index++;
 
 					
-											if(current_buffer_index < buffer_size && rays[i].sss_constant != 0.0)
+						if(current_buffer_index < buffer_size && rays[i].sss_constant != 0.0)
 						{
 							rays[i].child_subsurface_id = current_buffer_index;
-							rays[current_buffer_index].origin.xyz = hitPos.xyz - rayPayload.normal * 0.01;// + RandomUnitVector(prng_state)*0.01;
+							rays[current_buffer_index].origin.xyz = hitPos.xyz - rayPayload.normal * 0.01 + RandomUnitVector(prng_state)*0.01;
 							rays[current_buffer_index].direction.xyz = RandomUnitVector(prng_state);
 
 							rays[current_buffer_index].base_opacity = 0.0;
@@ -629,7 +632,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 							vec3 new_pos = vec3(0, 0, 0);
 							vec3 new_dir = vec3(0, 0, 0);
 							
-							int step_count = do_random_walk_until_exits_mesh(0.01, 20, rays[current_buffer_index].origin.xyz, new_pos, new_dir, rays[current_buffer_index].base_opacity);
+							int step_count = do_random_walk_until_exits_mesh(0.01, 10, rays[current_buffer_index].origin.xyz, new_pos, new_dir, rays[current_buffer_index].base_opacity);
+
 
 							//generate new ray segment
 							rays[current_buffer_index].origin.xyz = new_pos;
@@ -755,7 +759,6 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 			float reflect_accum = mix(rays[i].base_color, rays[rays[i].child_reflect_id].accumulated_color, rays[i].reflection_constant);
 			float refract_accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1.0 - rays[i].refraction_constant);
 		
-
 			if(rays[i].child_subsurface_id != -1)
 			{
 				float subsurface_accum = mix(rays[i].base_color, rays[rays[i].child_subsurface_id].accumulated_color, rays[i].sss_constant);
@@ -767,6 +770,13 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 		else if(pure_refraction)
 		{
 			accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1.0 - rays[i].refraction_constant);	
+		
+			if(rays[i].child_subsurface_id != -1)
+			{
+				float subsurface_accum = mix(rays[i].base_color, rays[rays[i].child_subsurface_id].accumulated_color, rays[i].sss_constant);
+				accum = mix(accum, subsurface_accum, rays[i].base_opacity);
+			}
+		
 		}
 		else if(pure_reflection)
 		{

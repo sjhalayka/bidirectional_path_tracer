@@ -117,6 +117,8 @@ void main()
 	rayPayload.color *= pow(2.0, light_scale);
 
 
+
+
 	// Do subsurface scattering coefficient and subsurface density
 	rayPayload.subsurface = 1.0;//texture(normalSampler, uv).g;
 	rayPayload.density = 0.0;//texture(normalSampler, uv).b;
