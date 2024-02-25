@@ -470,7 +470,7 @@ void get_origin_and_direction(inout vec4 origin, inout vec4 direction, float x, 
 }
 
 
-bool is_inside_mesh(const vec3 location)
+bool is_inside_mesh(const vec3 location, inout vec3 collision_pos, inout vec3 collision_dir, inout vec3 collision_colour)
 {
 	RayPayload r = rayPayload;
 	bool is_outside = false;
@@ -481,6 +481,10 @@ bool is_inside_mesh(const vec3 location)
 
 	if(rayPayload.dist == -1.0 || dot(direction, rayPayload.normal) <= 0.0)
 		is_outside = true;
+
+	collision_pos = location + direction*rayPayload.dist;
+	collision_dir = direction;
+	collision_colour = rayPayload.color;
 
 	rayPayload = r;
 	return !is_outside;
@@ -494,13 +498,27 @@ int do_random_walk_until_exits_mesh(const float density, const int max_walk_leng
 
 	int i = 1;
 
-	while(is_inside_mesh(pos) && i <= max_walk_length)
+	vec3 collision_pos = vec3(0, 0, 0);
+	vec3 collision_dir = vec3(0, 0, 0);
+	vec3 collision_colour = vec3(0, 0, 0);
+
+	bool inside_mesh = is_inside_mesh(pos, collision_pos, collision_dir, collision_colour);
+
+	while(inside_mesh && i <= max_walk_length)
 	{	
 		final_dir = RandomUnitVector(prng_state);
-		final_pos += final_dir*(1 - density);
-		base_opacity += (1.0 - clamp(base_opacity, 0.0, 1.0))*density;
+		final_pos += final_dir*0.01;
+
+		base_opacity += density;//(1.0 - clamp(base_opacity, 0.0, 1.0))*density;
 
 		i++;
+		inside_mesh = is_inside_mesh(final_pos, collision_pos, collision_dir, collision_colour);
+	}
+	
+	if(inside_mesh)
+	{
+		final_pos = collision_pos;
+		final_dir = collision_dir;
 	}
 
 	return i;
@@ -664,6 +682,28 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						rays[current_buffer_index].base_opacity = 1.0;
 						rays[current_buffer_index].origin.xyz = hitPos.xyz - rayPayload.normal * 0.01f;
 						rays[current_buffer_index].direction.xyz = refract(rays[i].direction.xyz, rayPayload.normal, eta);
+						
+							rays[current_buffer_index].base_opacity = 1.0;
+/*
+							// do random walk here to get base opacity
+							vec3 new_pos = vec3(0, 0, 0);
+							vec3 new_dir = vec3(0, 0, 0);
+							
+							int step_count = do_random_walk_until_exits_mesh(0.01, 3, rays[current_buffer_index].origin.xyz, new_pos, new_dir, rays[current_buffer_index].base_opacity);
+
+					
+							//generate new ray segment
+							rays[current_buffer_index].origin.xyz = new_pos;
+							rays[current_buffer_index].direction.xyz = new_dir;
+*/
+						
+						
+						
+						
+						
+						
+						
+						
 						rays[current_buffer_index].in_use = true;
 						rays[current_buffer_index].level = rays[i].level + 1;
 						rays[current_buffer_index].external_reflection_ray = false;
