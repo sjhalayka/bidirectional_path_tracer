@@ -97,25 +97,6 @@ void main()
 	rayPayload.tint = 0;
 	rayPayload.tint_colour = vec3(0, 0, 0);
 
-	// Do exponential lighting:
-	//
-	// Make sure that light_scale is equal to or less than 127.
-	// This is because a 4-byte float's maximum value is 2^127.
-	// This value should be zero for non-light triangles, and
-	// greater than zero for emissive triangles.
-	//
-	// The maximum value 2^127 is 1.7e+38, in base-10. 
-	// That's SUPER bright! No need for a double here (famous
-	// last words).
-	//
-	float light_scale = 255.0*texture(normalSampler, uv).r;
-	light_scale = clamp(light_scale, 0.0, 127.0);
-	
-	//if(light_scale > 0)
-	//light_scale = 4; // for debuggin purposes
-	
-	rayPayload.color *= pow(2.0, light_scale);
-
 
 
 
@@ -154,6 +135,25 @@ void main()
 	}
 	
 
+	
+	// Do exponential lighting:
+	//
+	// Make sure that light_scale is equal to or less than 127.
+	// This is because a 4-byte float's maximum value is 2^127.
+	// This value should be zero for non-light triangles, and
+	// greater than zero for emissive triangles.
+	//
+	// The maximum value 2^127 is 1.7e+38, in base-10. 
+	// That's SUPER bright! No need for a double here (famous
+	// last words).
+	//
+	float light_scale = 255.0*texture(normalSampler, uv).r;
+	light_scale = clamp(light_scale, 0.0, 127.0);
+	
+	//if(light_scale > 0)
+	//light_scale = 4; // for debuggin purposes
+	
+	rayPayload.color *= pow(2.0, light_scale);
 
 
 }
