@@ -386,12 +386,12 @@ float get_omni_radiance_backward(const int samples, const int steps, const vec3 
 
 	rayPayload = r;
 
-	return ret_colour;// / samples;
+	return ret_colour / samples;
 }
 
 
 
-void get_fog(inout float dist_color, inout float dist_opacity, vec3 origin, vec3 direction, vec3 hitPos, float hue, float eta)
+void get_fog(inout float dist_color, inout float dist_opacity, vec3 origin, vec3 direction, vec3 hitPos, float hitColor, float hue, float eta)
 {
 	vec3 start = origin;
 	vec3 end = origin;
@@ -435,7 +435,8 @@ void get_fog(inout float dist_color, inout float dist_opacity, vec3 origin, vec3
 
 		for(int j = 0; j < num_steps; j++, curr_step += step)
 		{
-			float colour = get_omni_radiance_backward(10, 5, curr_step, hue, eta);
+			const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
+			float colour = hitColor;//hitColor.r*mask.r + hitColor.g*mask.g + hitColor.b*mask.b;//hitColor;//get_omni_radiance_backward(10, 5, curr_step, hue, eta);
 
 			float noise = noise3(curr_step, 1.0);
 
@@ -447,7 +448,7 @@ void get_fog(inout float dist_color, inout float dist_opacity, vec3 origin, vec3
 
 			const float trans = 1.0 - clamp(dist_opacity, 0.0, 1.0);
 			dist_color += colour*trans;
-			dist_opacity += 0.1*colour*trans;
+			dist_opacity += 0.01*colour*trans;
 		}
 	}
 
@@ -624,20 +625,14 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				rays[i].sss_constant = rayPayload.subsurface;
 				rays[i].sss_density = rayPayload.density;
 
-
-
 				rays[i].base_opacity = 0.0;
 				// Do some fog in an AABB
 				float dist_color = 0.0;
 				float dist_opacity = 0.0;
-				get_fog(dist_color, dist_opacity, rays[i].origin.xyz, rays[i].direction.xyz, hitPos.xyz, hue, eta);
-				dist_color = clamp(dist_color, 0.0, 1.0);
+				//get_fog(dist_color, dist_opacity, rays[i].origin.xyz, rays[i].direction.xyz, hitPos.xyz, rays[i].base_color, hue, eta);
+				//dist_color = clamp(dist_color, 0.0, 1.0);
 				dist_opacity = clamp(dist_opacity, 0.0, 1.0);
 				rays[i].base_color = mix(rays[i].base_color, dist_color, dist_opacity);
-
-
-
-
 
 				// entering mesh
 				if(dot(rays[i].direction.xyz, rayPayload.normal) <= 0.0)
