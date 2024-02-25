@@ -490,11 +490,12 @@ bool is_inside_mesh(const vec3 location, inout vec3 collision_pos, inout vec3 co
 	return !is_outside;
 }
 
-int do_random_walk_until_exits_mesh(const float density, const int max_walk_length, vec3 pos, inout vec3 final_pos, inout vec3 final_dir, inout float base_opacity)
+int do_random_walk_until_exits_mesh(const float density, const int max_walk_length, vec3 pos, inout vec3 final_pos, inout vec3 final_dir, inout float base_colour, inout float base_opacity, const float hue)
 {
 	final_pos = pos;
 	final_dir = RandomUnitVector(prng_state);
 	base_opacity = 0.0;
+	base_colour = 0.0;
 
 	int i = 1;
 
@@ -509,7 +510,14 @@ int do_random_walk_until_exits_mesh(const float density, const int max_walk_leng
 		final_dir = RandomUnitVector(prng_state);
 		final_pos += final_dir*0.01;
 
-		base_opacity += density;//(1.0 - clamp(base_opacity, 0.0, 1.0))*density;
+		const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
+		float colour = collision_colour.r*mask.r + collision_colour.g*mask.g + collision_colour.b*mask.b;
+
+		const float trans = 1.0 - clamp(base_opacity, 0.0, 1.0);
+		base_colour += colour*trans;
+		base_opacity += colour*0.1*trans;
+
+		//base_opacity += density;//(1.0 - clamp(base_opacity, 0.0, 1.0))*density;
 
 		i++;
 		inside_mesh = is_inside_mesh(final_pos, collision_pos, collision_dir, collision_colour);
@@ -517,6 +525,14 @@ int do_random_walk_until_exits_mesh(const float density, const int max_walk_leng
 	
 	if(inside_mesh)
 	{
+		const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
+
+		float colour = collision_colour.r*mask.r + collision_colour.g*mask.g + collision_colour.b*mask.b;
+
+		const float trans = 1.0 - clamp(base_opacity, 0.0, 1.0);
+		base_colour += colour*trans;
+		base_opacity += 0.1*colour*trans;
+
 		final_pos = collision_pos;
 		final_dir = collision_dir;
 	}
@@ -638,7 +654,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						current_buffer_index++;
 
 					
-						if(current_buffer_index < buffer_size && rays[i].sss_constant != 0.0)
+	
+							if(current_buffer_index < buffer_size && rays[i].sss_constant != 0.0)
 						{
 							rays[i].child_subsurface_id = current_buffer_index;
 							rays[current_buffer_index].origin.xyz = hitPos.xyz - rayPayload.normal * 0.01 + RandomUnitVector(prng_state)*0.01;
@@ -649,8 +666,16 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 							// do random walk here to get base opacity
 							vec3 new_pos = vec3(0, 0, 0);
 							vec3 new_dir = vec3(0, 0, 0);
-							
-							int step_count = do_random_walk_until_exits_mesh(0.01, 10, rays[current_buffer_index].origin.xyz, new_pos, new_dir, rays[current_buffer_index].base_opacity);
+						
+							float base_colour;
+
+							int step_count = do_random_walk_until_exits_mesh(0.01, 10, rays[current_buffer_index].origin.xyz, new_pos, new_dir, base_colour, rays[current_buffer_index].base_opacity, hue);
+
+							//base_colour = clamp(base_colour, 0.0, 1.0);
+							//rays[current_buffer_index].base_opacity = clamp(rays[current_buffer_index].base_opacity, 0.0, 1.0);//clamp(dist_opacity, 0.0, 1.0);
+							rays[i].base_color = mix(rays[i].base_color, base_colour, rays[current_buffer_index].base_opacity);
+
+
 
 
 							//generate new ray segment
@@ -667,11 +692,11 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						}
 
 
-
 					}
 					
 
 
+				
 
 
 					if(current_buffer_index < buffer_size && rays[i].refraction_constant != 1.0)
