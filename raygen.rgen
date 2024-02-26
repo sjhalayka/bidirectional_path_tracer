@@ -348,16 +348,6 @@ float get_radiance_backward(const int samples, const int steps, const vec3 origi
 
 
 
-void get_fog2(
-	const vec3 start_location,
-	const vec3 end_location,
-	inout float dist_color, 
-	inout float dist_opacity,
-	const float hue,
-	const float eta,
-	const vec3 colour);
-
-
 
 
 
@@ -428,59 +418,30 @@ void get_origin_and_direction(inout vec4 origin, inout vec4 direction, float x, 
 
 
 
-
-
-
-
-
-void get_fog2(
-	const vec3 start_location,
-	const vec3 end_location,
-	inout float dist_color, 
-	inout float dist_opacity,
-	const float hue,
-	const float eta,
-	const vec3 colour)
+float get_omni_radiance_backward_with_fog(inout vec3 final_pos, const int samples, const int steps, const vec3 origin, const float hue, const float eta)
 {
-	dist_color = 0;
-	dist_opacity = 0;
+	RayPayload r = rayPayload;
 
-	const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
+	float ret_colour = 0.0;
+			float dist_color = 0;
+		float dist_opacity = 0;
 
-	vec3 start = start_location;
-	vec3 end = end_location;
-
-	const float target_step_length = 0.01;
-
-	const int num_steps = int(floor((distance(start, end) / target_step_length)));
-
-	if(num_steps >= 2)
+	for(int s = 0; s < samples; s++)
 	{
-		const vec3 step = (end - start) / (num_steps - 1);
+		float local_colour = trace_path_backward(final_pos, steps, origin, RandomUnitVector(prng_state), hue, eta);
+		
+		dist_color = local_colour*distance(origin.xyz, final_pos.xyz);///10.0;
+		dist_opacity = 1.0;
 
-		vec3 curr_step = start;
+		ret_colour += dist_color;
 
-		for(int j = 0; j < num_steps; j++, curr_step += step)
-		{
-			vec3 final_pos = vec3(0, 0, 0);
-
-			float colour = get_omni_radiance_backward_without_fog(final_pos, 10, 5, curr_step, hue, eta);
-
-			// todo: generate fog based on origin and final_pos
-
-			colour = distance(final_pos, curr_step)/100.0;
-
-
-			const float trans = 1.0 - clamp(dist_opacity, 0.0, 1.0);
-			dist_color += colour*trans;
-			dist_opacity += 0.1*trans;
-		}
 	}
 
-	dist_color *= (colour.r*mask.r + colour.g*mask.g + colour.b*mask.b);
+	rayPayload = r;
 
-	//dist_color = 1 - dist_color;
+	return ret_colour / samples;
 }
+
 
 
 
@@ -566,28 +527,18 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
 
 		if(
-
-				rays[i].internal_refraction_ray == true ||
-				rays[i].external_refraction_ray == true
-				
-				
+				false == rays[i].external_reflection_ray
+				//rays[i].internal_refraction_ray == true ||
+				//rays[i].external_refraction_ray == true
 			)
 				{
-				//	rays[i].base_color = mask.r;
-				//	return rays[i].base_color;
+					
 
-						//rays[i].base_color = clamp(rays[i].depth, 0.0, 1.0);
-						
-						//return rays[i].base_color;
+					RayPayload r = rayPayload;
 
-						//rays[i].base_color *= pow(get_omni_radiance_backward(10, 5, (rays[i].origin.xyz + hitPos.xyz)*0.5, hue, eta), 1.0);
-						//return rays[i].base_color;
+					traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, hitPos.xyz, tmin, rays[i].direction.xyz, tmax, 0);
 
-				RayPayload r = rayPayload;
-
-				traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, hitPos.xyz, tmin, rays[i].direction.xyz, tmax, 0);
-
-				vec4 hitPos2 = hitPos + rays[i].direction * rayPayload.dist;
+					vec4 hitPos2 = hitPos + rays[i].direction * rayPayload.dist;
 
 		
 
@@ -595,27 +546,23 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				
 					float dist_color = 0.0;
 					float dist_opacity = 0.0;
-					
-					const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
-				
-				/*
-					get_fog2(
-						hitPos.xyz,
-						hitPos2.xyz,
-						dist_color, 
-						dist_opacity,
-						hue,
-						eta,
-						rayPayload.color);
-					*/	
 				
 						rayPayload = r;
 
+						dist_color = distance(hitPos.xyz, hitPos2.xyz);
+						dist_opacity = 1.0;
 
-						dist_color = distance(hitPos.xyz, hitPos2.xyz)/10.0;
-						dist_opacity = 0.01;
+						vec3 final_pos = vec3(0, 0, 0);
 
+						float dist_color_omni = get_omni_radiance_backward_with_fog(
+							final_pos, 
+							10, 
+							5, 
+							hitPos.xyz, 
+							hue, 
+							eta);
 
+						dist_color *= dist_color_omni;//distance(hitPos.xyz, hitPos2.xyz);
 
 					//dist_color = clamp(dist_color, 0.0, 1.0);
 					dist_opacity = clamp(dist_opacity, 0.0, 1.0);
