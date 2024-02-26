@@ -119,6 +119,17 @@ void main()
 		//rayPayload.color = rayPayload.tint_colour;
 	}
 
+/*	if(rayPayload.color.r == 1.0 &&
+		rayPayload.color.g == 1.0 &&
+		rayPayload.color.b == 1.0)
+		{
+				rayPayload.color.r = 1.0;
+		rayPayload.color.g = 0.75;
+		rayPayload.color.b = 0.50;
+	}
+*/
+
+
 	if(rayPayload.reflector == 1.0)
 	{
 	//	rayPayload.color.r = 1.0;
@@ -154,6 +165,4 @@ void main()
 	//light_scale = 4; // for debuggin purposes
 	
 	rayPayload.color *= pow(2.0, light_scale);
-
-
 }

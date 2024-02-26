@@ -523,8 +523,8 @@ int do_random_walk_until_exits_mesh(const float density, const int max_walk_leng
 		float colour = collision_colour.r*mask.r + collision_colour.g*mask.g + collision_colour.b*mask.b;
 
 		const float trans = 1.0 - clamp(base_opacity, 0.0, 1.0);
-		base_colour += colour*trans;
-		base_opacity += 0.1*colour*trans;
+		base_colour += colour;//*trans;
+		base_opacity += 0.1;//*colour;*trans;
 
 		i++;
 		inside_mesh = is_inside_mesh(final_pos, collision_pos, collision_dir, collision_colour);
@@ -537,8 +537,8 @@ int do_random_walk_until_exits_mesh(const float density, const int max_walk_leng
 		float colour = collision_colour.r*mask.r + collision_colour.g*mask.g + collision_colour.b*mask.b;
 
 		const float trans = 1.0 - clamp(base_opacity, 0.0, 1.0);
-		base_colour += colour*trans;
-		base_opacity += 0.1*colour*trans;
+		base_colour += colour;//*trans;
+		base_opacity += 0.1;//*colour*trans;
 
 		final_pos = collision_pos;
 		final_dir = collision_dir;
@@ -656,7 +656,53 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 					
 	
-							if(current_buffer_index < buffer_size && rays[i].sss_constant != 0.0)
+						
+
+
+					}
+					
+
+
+				
+
+
+					if(current_buffer_index < buffer_size && rays[i].refraction_constant != 1.0)
+					{
+						rays[i].child_refract_id = current_buffer_index;
+
+						//generate new ray segment
+						rays[current_buffer_index].base_opacity = 1.0;
+						rays[current_buffer_index].origin.xyz = hitPos.xyz - rayPayload.normal * 0.01f;
+						rays[current_buffer_index].direction.xyz = refract(rays[i].direction.xyz, rayPayload.normal, eta);
+						/*
+							rays[current_buffer_index].base_opacity = 0.0;
+
+							// do random walk here to get base opacity
+							vec3 new_pos = vec3(0, 0, 0);
+							vec3 new_dir = vec3(0, 0, 0);
+						
+							float base_colour;
+
+							int step_count = do_random_walk_until_exits_mesh(0.01, 10, rays[current_buffer_index].origin.xyz, new_pos, new_dir, base_colour, rays[current_buffer_index].base_opacity, hue);
+
+					
+							//generate new ray segment
+							rays[current_buffer_index].origin.xyz = new_pos;
+							rays[current_buffer_index].direction.xyz = new_dir;
+							*/
+						
+						rays[current_buffer_index].in_use = true;
+						rays[current_buffer_index].level = rays[i].level + 1;
+						rays[current_buffer_index].external_reflection_ray = false;
+						rays[current_buffer_index].external_refraction_ray = false;
+						rays[current_buffer_index].internal_subsurface_ray = false;
+						rays[current_buffer_index].parent_id = i;
+						current_buffer_index++;
+					}	
+
+
+
+						if(current_buffer_index < buffer_size && rays[i].sss_constant != 0.0)
 						{
 							rays[i].child_subsurface_id = current_buffer_index;
 							rays[current_buffer_index].origin.xyz = hitPos.xyz - rayPayload.normal * 0.01 + RandomUnitVector(prng_state)*0.01;
@@ -677,8 +723,6 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 							//rays[i].base_color = mix(rays[i].base_color, base_colour, rays[current_buffer_index].base_opacity);
 
 
-
-
 							//generate new ray segment
 							rays[current_buffer_index].origin.xyz = new_pos;
 							rays[current_buffer_index].direction.xyz = new_dir;
@@ -693,53 +737,9 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						}
 
 
-					}
-					
 
 
-				
 
-
-					if(current_buffer_index < buffer_size && rays[i].refraction_constant != 1.0)
-					{
-						rays[i].child_refract_id = current_buffer_index;
-
-						//generate new ray segment
-						rays[current_buffer_index].base_opacity = 1.0;
-						rays[current_buffer_index].origin.xyz = hitPos.xyz - rayPayload.normal * 0.01f;
-						rays[current_buffer_index].direction.xyz = refract(rays[i].direction.xyz, rayPayload.normal, eta);
-						
-							rays[current_buffer_index].base_opacity = 0.0;
-
-							// do random walk here to get base opacity
-							vec3 new_pos = vec3(0, 0, 0);
-							vec3 new_dir = vec3(0, 0, 0);
-						
-							float base_colour;
-
-							int step_count = do_random_walk_until_exits_mesh(0.01, 10, rays[current_buffer_index].origin.xyz, new_pos, new_dir, base_colour, rays[current_buffer_index].base_opacity, hue);
-
-					
-							//generate new ray segment
-							rays[current_buffer_index].origin.xyz = new_pos;
-							rays[current_buffer_index].direction.xyz = new_dir;
-
-						
-						
-						
-						
-						
-						
-						
-						
-						rays[current_buffer_index].in_use = true;
-						rays[current_buffer_index].level = rays[i].level + 1;
-						rays[current_buffer_index].external_reflection_ray = false;
-						rays[current_buffer_index].external_refraction_ray = false;
-						rays[current_buffer_index].internal_subsurface_ray = false;
-						rays[current_buffer_index].parent_id = i;
-						current_buffer_index++;
-					}	
 				}
 				// exiting mesh
 				else
