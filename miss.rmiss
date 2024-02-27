@@ -8,9 +8,6 @@ struct RayPayload
 	vec3 normal;
 	float reflector;
 	float opacity;
-	float tint;
-	vec3 tint_colour;
-	vec3 pos;
 };
 
 layout(location = 0) rayPayloadInEXT RayPayload rayPayload;
@@ -22,7 +19,4 @@ void main()
 	rayPayload.normal = vec3(0.0, 0.0, 0.0);
 	rayPayload.reflector = 0.0;
 	rayPayload.opacity = 0.0;
-	rayPayload.tint = 0.0;
-	rayPayload.tint_colour = vec3(0, 0, 0);
-	rayPayload.pos = vec3(0, 0, 0);
 }
