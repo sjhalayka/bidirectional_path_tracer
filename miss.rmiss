@@ -8,6 +8,10 @@ struct RayPayload
 	vec3 normal;
 	float reflector;
 	float opacity;
+	float tint;
+	vec3 tint_colour;
+	float subsurface;
+	float density;
 };
 
 layout(location = 0) rayPayloadInEXT RayPayload rayPayload;

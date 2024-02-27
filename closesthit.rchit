@@ -2,7 +2,7 @@
 #extension GL_EXT_ray_tracing : require
 #extension GL_EXT_nonuniform_qualifier : enable
 
-struct RayPayload 
+struct RayPayload
 {
 	vec3 color;
 	float dist;
@@ -109,7 +109,7 @@ void main()
 	// Make the transparent sphere reflective
 	if(rayPayload.opacity == 0.0)
 	{
-		rayPayload.opacity = 0.0;
+		rayPayload.opacity = 0.1;
 		rayPayload.reflector = 0.1;
 
 		rayPayload.color = vec3(1,1,1);
@@ -118,6 +118,13 @@ void main()
 		//rayPayload.tint_colour = vec3(1,0,0);
 		//rayPayload.color = rayPayload.tint_colour;
 	}
+	else
+	{
+	//	rayPayload.subsurface = 0.0;
+	}
+
+
+
 
 /*	if(rayPayload.color.r == 1.0 &&
 		rayPayload.color.g == 1.0 &&

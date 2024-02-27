@@ -27,9 +27,11 @@ struct ray
 
 	float base_color;
 	float accumulated_color;
-	float base_opacity;
+	//float base_opacity;
 
-
+	
+	float sss_base_opacity;
+	float sss_base_colour;
 
 	float reflection_constant;
 	float refraction_constant;
@@ -523,8 +525,8 @@ int do_random_walk_until_exits_mesh(const float density, const int max_walk_leng
 		float colour = collision_colour.r*mask.r + collision_colour.g*mask.g + collision_colour.b*mask.b;
 
 		const float trans = 1.0 - clamp(base_opacity, 0.0, 1.0);
-		base_colour += colour;//*trans;
-		base_opacity += 0.1;//*colour;*trans;
+		base_colour += colour*trans;
+		base_opacity += 0.1*colour*trans;
 
 		i++;
 		inside_mesh = is_inside_mesh(final_pos, collision_pos, collision_dir, collision_colour);
@@ -579,6 +581,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 		rays[i].depth = 0;
 		rays[i].tint_constant = 0;
 		rays[i].tint_colour = vec3(0, 0, 0);
+		rays[i].sss_base_opacity = 0;
+		rays[i].sss_base_colour = 0;
 	}
 
 	rays[0].direction = direction;
@@ -625,7 +629,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				rays[i].sss_constant = rayPayload.subsurface;
 				rays[i].sss_density = rayPayload.density;
 
-				rays[i].base_opacity = 0.0;
+			
 				// Do some fog in an AABB
 				float dist_color = 0.0;
 				float dist_opacity = 0.0;
@@ -641,7 +645,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 					if(current_buffer_index < buffer_size && rays[i].reflection_constant != 0.0)
 					{
-						rays[current_buffer_index].base_opacity = 1.0;
+				
 
 						rays[i].child_reflect_id = current_buffer_index;
 						rays[current_buffer_index].origin.xyz = hitPos.xyz + rayPayload.normal * 0.01f;
@@ -671,25 +675,9 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						rays[i].child_refract_id = current_buffer_index;
 
 						//generate new ray segment
-						rays[current_buffer_index].base_opacity = 1.0;
+
 						rays[current_buffer_index].origin.xyz = hitPos.xyz - rayPayload.normal * 0.01f;
 						rays[current_buffer_index].direction.xyz = refract(rays[i].direction.xyz, rayPayload.normal, eta);
-						/*
-							rays[current_buffer_index].base_opacity = 0.0;
-
-							// do random walk here to get base opacity
-							vec3 new_pos = vec3(0, 0, 0);
-							vec3 new_dir = vec3(0, 0, 0);
-						
-							float base_colour;
-
-							int step_count = do_random_walk_until_exits_mesh(0.01, 10, rays[current_buffer_index].origin.xyz, new_pos, new_dir, base_colour, rays[current_buffer_index].base_opacity, hue);
-
-					
-							//generate new ray segment
-							rays[current_buffer_index].origin.xyz = new_pos;
-							rays[current_buffer_index].direction.xyz = new_dir;
-							*/
 						
 						rays[current_buffer_index].in_use = true;
 						rays[current_buffer_index].level = rays[i].level + 1;
@@ -708,24 +696,27 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 							rays[current_buffer_index].origin.xyz = hitPos.xyz - rayPayload.normal * 0.01 + RandomUnitVector(prng_state)*0.01;
 							rays[current_buffer_index].direction.xyz = RandomUnitVector(prng_state);
 
-							rays[current_buffer_index].base_opacity = 0.0;
 
+						
 							// do random walk here to get base opacity
 							vec3 new_pos = vec3(0, 0, 0);
 							vec3 new_dir = vec3(0, 0, 0);
 						
 							float base_colour;
 
-							int step_count = do_random_walk_until_exits_mesh(0.01, 10, rays[current_buffer_index].origin.xyz, new_pos, new_dir, base_colour, rays[current_buffer_index].base_opacity, hue);
-
-							//base_colour = clamp(base_colour, 0.0, 1.0);
-							//rays[current_buffer_index].base_opacity = clamp(rays[current_buffer_index].base_opacity, 0.0, 1.0);//clamp(dist_opacity, 0.0, 1.0);
-							//rays[i].base_color = mix(rays[i].base_color, base_colour, rays[current_buffer_index].base_opacity);
-
+							int step_count = do_random_walk_until_exits_mesh(0.01, 10, rays[current_buffer_index].origin.xyz, new_pos, new_dir, rays[current_buffer_index].sss_base_colour, rays[current_buffer_index].sss_base_opacity, hue);
 
 							//generate new ray segment
 							rays[current_buffer_index].origin.xyz = new_pos;
 							rays[current_buffer_index].direction.xyz = new_dir;
+							
+
+							//rays[current_buffer_index].origin.xyz = hitPos.xyz + rayPayload.normal * 0.01f;
+						//	rays[current_buffer_index].direction.xyz = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);//reflect(rays[i].direction.xyz, rayPayload.normal);
+
+
+
+
 
 							rays[current_buffer_index].in_use = true;
 							rays[current_buffer_index].level = rays[i].level + 1;
@@ -752,7 +743,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 						if(temp_dir != vec3(0.0))
 						{
-							rays[current_buffer_index].base_opacity = 0.0;
+							
 							rays[current_buffer_index].origin.xyz = hitPos.xyz + rayPayload.normal * 0.01;
 							rays[current_buffer_index].direction.xyz = temp_dir;
 							rays[current_buffer_index].external_reflection_ray = false;
@@ -767,7 +758,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						else
 						{
 							// Total internal reflection
-							rays[current_buffer_index].base_opacity = 0.0;
+							
 							rays[current_buffer_index].origin.xyz = hitPos.xyz - rayPayload.normal * 0.01f;
 							rays[current_buffer_index].direction.xyz = reflect(rays[i].direction.xyz, -rayPayload.normal);
 							rays[current_buffer_index].in_use = true;
@@ -827,21 +818,14 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 			float reflect_accum = mix(rays[i].base_color, rays[rays[i].child_reflect_id].accumulated_color, rays[i].reflection_constant);
 			float refract_accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1 - rays[i].refraction_constant);
 		
-			if(rays[i].child_subsurface_id != -1)// && stepAndOutputRNGFloat(prng_state) <= rayPayload.subsurface)
-				refract_accum = mix(rays[i].base_color, rays[rays[i].child_subsurface_id].accumulated_color, rays[i].sss_constant);	
+			//reflect_accum = mix(reflect_accum, rays[i].sss_base_colour, rays[i].sss_base_opacity);
+			//refract_accum *= rays[i].sss_base_colour*rays[i].sss_base_opacity;
 
 			accum = mix(refract_accum, reflect_accum, ratio);
 		}
 		else if(pure_refraction)
 		{
 			accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1.0 - rays[i].refraction_constant);	
-		
-			if(rays[i].child_subsurface_id != -1)
-			{
-				float subsurface_accum = mix(rays[i].base_color, rays[rays[i].child_subsurface_id].accumulated_color, rays[i].sss_constant);
-				accum = mix(accum, subsurface_accum, rays[i].base_opacity);
-			}
-		
 		}
 		else if(pure_reflection)
 		{
