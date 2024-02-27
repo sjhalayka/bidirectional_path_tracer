@@ -11,8 +11,7 @@ struct RayPayload
 	float opacity;
 	float tint;
 	vec3 tint_colour;
-	float subsurface;
-	float density;
+	vec3 pos;
 };
 
 layout(location = 0) rayPayloadInEXT RayPayload rayPayload;
@@ -96,28 +95,19 @@ void main()
 	rayPayload.normal = normalize(n.xyz);
 	rayPayload.tint = 0;
 	rayPayload.tint_colour = vec3(0, 0, 0);
+	rayPayload.pos = pos;
 
+		
 
 
 
 	// Do subsurface scattering coefficient and subsurface density
-	rayPayload.subsurface = 1.0;//texture(normalSampler, uv).g;
-	rayPayload.density = 0.0;//texture(normalSampler, uv).b;
+	//rayPayload.subsurface = 1.0;//texture(normalSampler, uv).g;
+	//rayPayload.density = 0.0;//texture(normalSampler, uv).b;
 	
 	rayPayload.reflector = texture(normalSampler, uv).a;
 
-	// Make the transparent sphere reflective
-	if(rayPayload.opacity == 0.0)
-	{
-		rayPayload.opacity = 0.0;
-		rayPayload.reflector = 0.1;
 
-		rayPayload.color = vec3(1,1,1);
-
-		//rayPayload.tint = 1.0;
-		//rayPayload.tint_colour = vec3(1,0,0);
-		//rayPayload.color = rayPayload.tint_colour;
-	}
 
 /*	if(rayPayload.color.r == 1.0 &&
 		rayPayload.color.g == 1.0 &&
@@ -132,9 +122,9 @@ void main()
 
 	if(rayPayload.reflector == 1.0)
 	{
-	//	rayPayload.color.r = 1.0;
-	//	rayPayload.color.g = 0.5;
-	//	rayPayload.color.b = 0.0;
+		rayPayload.color.r = 1.0;
+		rayPayload.color.g = 0.5;
+		rayPayload.color.b = 0.0;
 	
 		rayPayload.opacity = 1.0;
 		rayPayload.color = vec3(1,1,1);
@@ -145,9 +135,7 @@ void main()
 		//rayPayload.color = rayPayload.tint_colour;
 	}
 	
-
-	
-	// Do exponential lighting:
+		// Do exponential lighting:
 	//
 	// Make sure that light_scale is equal to or less than 127.
 	// This is because a 4-byte float's maximum value is 2^127.
@@ -165,4 +153,28 @@ void main()
 	//light_scale = 4; // for debuggin purposes
 	
 	rayPayload.color *= pow(2.0, light_scale);
+
+	float light_opacity = 0;
+	float light_reflector = 0;
+
+	if(rayPayload.color.r > 1 || rayPayload.color.g > 1 || rayPayload.color.b > 1)
+	{
+		light_opacity = rayPayload.opacity;
+		light_reflector = rayPayload.reflector;
+	}
+
+		// Make the transparent sphere reflective
+	if(rayPayload.opacity == 0.0)
+	{
+		rayPayload.opacity = 0.1;//light_opacity;//0.0;
+		rayPayload.reflector = 0.1;// light_reflector;//0.1;
+
+
+		rayPayload.color = vec3(1,1,1);
+
+
+		//rayPayload.tint = 1.0;
+		//rayPayload.tint_colour = vec3(1,0,0);
+		//rayPayload.color = rayPayload.tint_colour;
+	}
 }

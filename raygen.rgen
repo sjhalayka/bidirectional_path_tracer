@@ -42,6 +42,8 @@ struct ray
 	bool internal_refraction_ray;
 
 	int level;
+
+	bool did_fog;
 };
 
 
@@ -129,6 +131,7 @@ struct RayPayload
 	float opacity;
 	float tint;
 	vec3 tint_colour;
+	vec3 pos;
 };
 
 layout(location = 0) rayPayloadEXT RayPayload rayPayload;
@@ -213,6 +216,8 @@ vec3 cosWeightedRandomHemisphereDirection( const vec3 n, inout uint state )
 
 float trace_path_backward(inout vec3 final_pos, const int steps, const vec3 origin, const vec3 direction, const float hue, const float eta)
 {
+	RayPayload r = rayPayload;
+
 	vec3 o = origin;
 	vec3 d = direction;
 
@@ -272,7 +277,6 @@ float trace_path_backward(inout vec3 final_pos, const int steps, const vec3 orig
 			break;
 		}
 
-
 		vec3 hitPos = o + d * rayPayload.dist;
 
 		if(stepAndOutputRNGFloat(prng_state) <= rayPayload.opacity)
@@ -321,7 +325,9 @@ float trace_path_backward(inout vec3 final_pos, const int steps, const vec3 orig
 		}
 	}
 
-	final_pos = o;
+	rayPayload = r;
+
+	final_pos = o + d * rayPayload.dist;
 
 	return ret_colour / total;
 }
@@ -419,26 +425,29 @@ void get_origin_and_direction(inout vec4 origin, inout vec4 direction, float x, 
 
 float get_omni_radiance_backward_with_fog(inout vec3 final_pos, const int samples, const int steps, const vec3 origin, const float hue, const float eta)
 {
+	final_pos = vec3(0, 0, 0);
+
 	RayPayload r = rayPayload;
 
 	float ret_colour = 0.0;
-	float dist_color = 0;
+
+	int s_total = 1;
 
 	for(int s = 0; s < samples; s++)
 	{
-		float dist_colour = trace_path_backward(final_pos, steps, origin, RandomUnitVector(prng_state), hue, eta);
-		
-		//local_colour *= local_colour*distance(origin.xyz, final_pos.xyz);
+		float dist_color = trace_path_backward(final_pos, steps, origin, RandomUnitVector(prng_state), hue, eta);
 
-		//dist_color = local_colour*distance(origin.xyz, final_pos.xyz);///10.0;
-	//	dist_opacity = 1.0;
+		ret_colour += dist_color;
 
-		ret_colour += dist_color;//local_colour;
+		if(final_pos != vec3(0, 0, 0))
+			break;
+
+		s_total++;
 	}
 
 	rayPayload = r;
 
-	return ret_colour / samples;
+	return ret_colour / s_total;
 }
 
 
@@ -476,6 +485,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 		rays[i].depth = 0;
 		rays[i].tint_constant = 0;
 		rays[i].tint_colour = vec3(0, 0, 0);
+		rays[i].did_fog = false;
 	}
 
 	rays[0].direction = direction;
@@ -526,53 +536,55 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
 
 		if(
-				false == rays[i].external_reflection_ray
-				//rays[i].internal_refraction_ray == true ||
-				//rays[i].external_refraction_ray == true
+				false == rays[i].did_fog
+				&&
+				(rays[i].internal_refraction_ray == true 
+				||
+				rays[i].external_refraction_ray == true
+				)
+		
 			)
 				{
-					
+					rays[i].did_fog = true;
 
 					RayPayload r = rayPayload;
 
 					traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, hitPos.xyz, tmin, rays[i].direction.xyz, tmax, 0);
 
-					vec4 hitPos2 = hitPos + rays[i].direction * rayPayload.dist;
+					float dist_color = 0.0;
+					float dist_opacity = 0.0;
 
 					if(rayPayload.dist != -1.0)
 					{
+						vec4 hitPos2 = hitPos + rays[i].direction * rayPayload.dist;
 
-					rayPayload = r;
-
-
-				
-					float dist_color = 0.0;
-					float dist_opacity = 0.0;
-				
-
-
-						dist_color =  distance(hitPos.xyz, hitPos2.xyz);
-						dist_opacity = 1.0;
+						dist_color = pow(distance(hitPos.xyz, hitPos2.xyz), 1.0);
+						dist_opacity = 0.0;
 
 						vec3 final_pos = vec3(0, 0, 0);
 
 						float dist_color_omni = get_omni_radiance_backward_with_fog(
 							final_pos, 
-							100, 
-							5, 
+							1000, 
+							2500, 
 							(hitPos.xyz + hitPos2.xyz)*0.5, 
 							hue, 
 							eta);
 
-						dist_color *= dist_color_omni;//distance(hitPos.xyz, hitPos2.xyz);
+						dist_color *= dist_color_omni;//*distance(final_pos, (hitPos.xyz + hitPos2.xyz)*0.5);
+						dist_opacity = 1 - clamp(dist_color, 0.0, 1.0);
 
 					//dist_color = clamp(dist_color, 0.0, 1.0);
-					dist_opacity = clamp(dist_opacity, 0.0, 1.0);
-					rays[i].base_color = mix(rays[i].base_color, dist_color, dist_opacity);
+					//dist_opacity = clamp(dist_opacity, 0.0, 1.0);
 
 	
 
 				}
+					
+					rays[i].base_color = mix(rays[i].base_color, dist_color, dist_opacity);
+
+				
+					rayPayload = r;
 				}
 				
 
