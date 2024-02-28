@@ -574,8 +574,8 @@ int do_random_walk_until_exits_mesh(const float density, const int max_walk_leng
 		float colour = collision_colour.r*mask.r + collision_colour.g*mask.g + collision_colour.b*mask.b;
 
 		const float trans = 1.0 - clamp(base_opacity, 0.0, 1.0);
-		base_colour += colour*trans;
-		base_opacity += 0.1*trans;
+		base_colour += colour;//*trans;
+		base_opacity += 0.001*trans;
 
 		i++;
 		inside_mesh = is_inside_mesh(final_pos, collision_pos, collision_dir, collision_colour);
@@ -588,15 +588,15 @@ int do_random_walk_until_exits_mesh(const float density, const int max_walk_leng
 		float colour = collision_colour.r*mask.r + collision_colour.g*mask.g + collision_colour.b*mask.b;
 
 		const float trans = 1.0 - clamp(base_opacity, 0.0, 1.0);
-		base_colour += colour*trans;
-		base_opacity += 0.1*trans;
+		base_colour += colour;//*trans;
+		base_opacity += 0.001*trans;
 
 		final_pos = collision_pos;
 		final_dir = collision_dir;
 	}
 
 //	base_colour /= i;
-//	base_colour = 1 - clamp(base_colour, 0, 1);
+	base_colour = 1 - clamp(base_colour, 0, 1);
 
 //	base_colour = stepAndOutputRNGFloat(prng_state);
 //	base_opacity = 1;
@@ -744,7 +744,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 					}	
 
 
-
+					/*
 						if(current_buffer_index < buffer_size && rays[i].sss_constant != 0.0)
 						{
 							rays[i].child_subsurface_id = current_buffer_index;
@@ -757,8 +757,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 	
 							int step_count = do_random_walk_until_exits_mesh(0.01, 100, rays[current_buffer_index].origin.xyz, new_pos, new_dir, rays[current_buffer_index].sss_base_colour, rays[current_buffer_index].sss_base_opacity, hue);
 
-							//return step_count / 127;
-							
+					
+		
 
 							//generate new ray segment
 							rays[current_buffer_index].origin.xyz = new_pos;
@@ -780,7 +780,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 							rays[current_buffer_index].parent_id = i;
 							current_buffer_index++;
 						}
-
+						*/
 
 
 
