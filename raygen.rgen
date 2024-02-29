@@ -504,11 +504,12 @@ bool is_inside_mesh(const vec3 location, inout vec3 collision_pos, inout vec3 co
 
 int do_random_walk_until_exits_mesh2(const vec3 velocity, const float sss_constant, const int max_walk_length, const vec3 pos, inout vec3 final_pos, inout vec3 final_dir, inout float base_colour, inout float base_opacity, const float hue)
 {
-	float vel_length = length(velocity);
-
 	final_pos = pos;
+	final_pos += RandomUnitVector(prng_state)*0.01;
+	
 	final_dir = velocity;
-	base_opacity = 0.001;
+	
+	base_opacity = 0.1;
 	base_colour = 0.0;
 
 	int i = 1;
@@ -521,14 +522,14 @@ int do_random_walk_until_exits_mesh2(const vec3 velocity, const float sss_consta
 	{	
 		final_dir = velocity;
 		final_pos += final_dir;
-		final_pos += RandomUnitVector(prng_state)*sss_constant*0.01;
+		final_pos += RandomUnitVector(prng_state)*0.01;
 
 		const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
 		float colour = collision_colour.r*mask.r + collision_colour.g*mask.g + collision_colour.b*mask.b;
 
 		const float trans = 1.0 - clamp(base_opacity, 0.0, 1.0);
-		base_colour += colour;//*trans;
-		base_opacity += 0.001;//*trans;
+		base_colour += 0.1;//colour*trans;
+		base_opacity += 0.1;
 
 		i++;
 	}
@@ -536,7 +537,7 @@ int do_random_walk_until_exits_mesh2(const vec3 velocity, const float sss_consta
 //	base_colour = mix(base_colour, 0, base_opacity);
 
 	//base_colour /= i;
-//	base_colour = 1 - clamp(base_colour, 0, 1);
+	//base_colour = 1 - clamp(base_colour, 0, 1);
 
 //	base_colour = stepAndOutputRNGFloat(prng_state);
 //	base_opacity = 1;
@@ -640,8 +641,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 
 
-				const float velocity_length = 0.1;
-				const int max_num_steps = 250;
+				const float velocity_length = 0.01;
+				const int max_num_steps = 300;
 
 				// entering mesh
 				if(dot(rays[i].direction.xyz, rayPayload.normal) <= 0.0)
@@ -668,7 +669,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 										normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
 										rays[i].sss_constant, 
 										max_num_steps, 
-										rays[current_buffer_index].origin.xyz, 
+										rays[current_buffer_index].origin.xyz - rayPayload.normal * 0.01 + RandomUnitVector(prng_state)*0.01, 
 										new_pos, 
 										new_dir, 
 										rays[current_buffer_index].sss_base_colour, 
@@ -701,7 +702,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 										normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
 										rays[i].sss_constant, 
 										max_num_steps, 
-										rays[current_buffer_index].origin.xyz, 
+										rays[current_buffer_index].origin.xyz - rayPayload.normal * 0.01 + RandomUnitVector(prng_state)*0.01,
 										new_pos, 
 										new_dir, 
 										rays[current_buffer_index].sss_base_colour, 
@@ -739,7 +740,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 											normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
 											rays[i].sss_constant, 
 											max_num_steps, 
-											rays[current_buffer_index].origin.xyz, 
+											rays[current_buffer_index].origin.xyz,
 											new_pos, 
 											new_dir, 
 											rays[current_buffer_index].sss_base_colour, 
@@ -768,7 +769,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 											normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
 											rays[i].sss_constant, 
 											max_num_steps, 
-											rays[current_buffer_index].origin.xyz, 
+											rays[current_buffer_index].origin.xyz,
 											new_pos, 
 											new_dir, 
 											rays[current_buffer_index].sss_base_colour, 
@@ -826,24 +827,34 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 			float reflect_accum = mix(rays[i].base_color, rays[rays[i].child_reflect_id].accumulated_color, rays[i].reflection_constant);
 			float refract_accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1 - rays[i].refraction_constant);
 		
-			//reflect_accum = mix(reflect_accum, rays[rays[i].child_reflect_id].sss_base_colour, rays[rays[i].child_reflect_id].sss_base_opacity);
-		///	refract_accum = mix(refract_accum, rays[rays[i].child_refract_id].sss_base_colour, rays[rays[i].child_refract_id].sss_base_opacity);
+			reflect_accum = mix(reflect_accum, rays[rays[i].child_reflect_id].sss_base_colour, rays[rays[i].child_reflect_id].sss_constant* rays[rays[i].child_reflect_id].sss_base_opacity);
+			refract_accum = mix(refract_accum, rays[rays[i].child_refract_id].sss_base_colour, rays[rays[i].child_reflect_id].sss_constant* rays[rays[i].child_refract_id].sss_base_opacity);
 
-			reflect_accum *= rays[rays[i].child_reflect_id].sss_base_colour * rays[rays[i].child_reflect_id].sss_base_opacity;
-			refract_accum *= rays[rays[i].child_refract_id].sss_base_colour * rays[rays[i].child_refract_id].sss_base_opacity;
+
+		
+	//		reflect_accum = rays[rays[i].child_reflect_id].sss_base_colour;
+	//		refract_accum = rays[rays[i].child_refract_id].sss_base_colour;
+
+
+
+//			reflect_accum = rays[rays[i].child_reflect_id].sss_base_colour * rays[rays[i].child_reflect_id].sss_base_opacity;
+//			refract_accum = rays[rays[i].child_refract_id].sss_base_colour * rays[rays[i].child_refract_id].sss_base_opacity;
 
 			accum = mix(refract_accum, reflect_accum, ratio);
 		}
 		else if(pure_refraction)
 		{
 			accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1.0 - rays[i].refraction_constant);	
+			
+			accum = mix(accum, rays[rays[i].child_refract_id].sss_base_colour, rays[rays[i].child_refract_id].sss_base_opacity);
 		}
 		else if(pure_reflection)
 		{
 			accum = mix(rays[i].base_color, rays[rays[i].child_reflect_id].accumulated_color, rays[i].reflection_constant);
+
+			accum = mix(accum, rays[rays[i].child_reflect_id].sss_base_colour, rays[rays[i].child_reflect_id].sss_base_opacity);
+
 		}
-
-
 
 		// Do tinting
 		const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
