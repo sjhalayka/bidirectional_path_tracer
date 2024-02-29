@@ -508,7 +508,7 @@ int do_random_walk_until_exits_mesh2(const vec3 velocity, const float sss_consta
 
 	final_pos = pos;
 	final_dir = velocity;
-	base_opacity = 0.0;
+	base_opacity = 0.001;
 	base_colour = 0.0;
 
 	int i = 1;
@@ -517,11 +517,9 @@ int do_random_walk_until_exits_mesh2(const vec3 velocity, const float sss_consta
 	vec3 collision_dir = vec3(0, 0, 0);
 	vec3 collision_colour = vec3(0, 0, 0);
 
-	bool inside_mesh = is_inside_mesh(final_pos, collision_pos, collision_dir, collision_colour);
-
-	while(inside_mesh && i <= max_walk_length)
+	while(is_inside_mesh(final_pos, collision_pos, collision_dir, collision_colour) && i <= max_walk_length)
 	{	
-		final_dir = velocity;//mix(velocity, vel_length*RandomUnitVector(prng_state), sss_constant);
+		final_dir = velocity;
 		final_pos += final_dir;
 		final_pos += RandomUnitVector(prng_state)*sss_constant*0.01;
 
@@ -530,98 +528,21 @@ int do_random_walk_until_exits_mesh2(const vec3 velocity, const float sss_consta
 
 		const float trans = 1.0 - clamp(base_opacity, 0.0, 1.0);
 		base_colour += colour;//*trans;
-		base_opacity += 0.001*trans;
+		base_opacity += 0.001;//*trans;
 
 		i++;
-		inside_mesh = is_inside_mesh(final_pos, collision_pos, collision_dir, collision_colour);
-	}
-	
-	if(true)//inside_mesh)
-	{
-		const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
-
-		float colour = collision_colour.r*mask.r + collision_colour.g*mask.g + collision_colour.b*mask.b;
-
-		const float trans = 1.0 - clamp(base_opacity, 0.0, 1.0);
-		base_colour += colour;//*trans;
-		base_opacity += 0.001*trans;
-
-		final_pos = collision_pos;
-		final_dir = collision_dir;
 	}
 
-//	base_colour /= i;
-	base_colour = 1 - clamp(base_colour, 0, 1);
+//	base_colour = mix(base_colour, 0, base_opacity);
+
+	//base_colour /= i;
+//	base_colour = 1 - clamp(base_colour, 0, 1);
 
 //	base_colour = stepAndOutputRNGFloat(prng_state);
 //	base_opacity = 1;
 
 	return i;
 }
-
-
-
-
-
-
-
-
-
-
-int do_random_walk_until_exits_mesh(const float density, const int max_walk_length, const vec3 pos, inout vec3 final_pos, inout vec3 final_dir, inout float base_colour, inout float base_opacity, const float hue)
-{
-	final_pos = pos;
-	final_dir = RandomUnitVector(prng_state);
-	base_opacity = 0.0;
-	base_colour = 0.0;
-
-	int i = 1;
-
-	vec3 collision_pos = vec3(0, 0, 0);
-	vec3 collision_dir = vec3(0, 0, 0);
-	vec3 collision_colour = vec3(0, 0, 0);
-
-	bool inside_mesh = is_inside_mesh(final_pos, collision_pos, collision_dir, collision_colour);
-
-	while(inside_mesh && i <= max_walk_length)
-	{	
-		final_dir = RandomUnitVector(prng_state);
-		final_pos += final_dir*0.01;
-
-		const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
-		float colour = collision_colour.r*mask.r + collision_colour.g*mask.g + collision_colour.b*mask.b;
-
-		const float trans = 1.0 - clamp(base_opacity, 0.0, 1.0);
-		base_colour += colour;//*trans;
-		base_opacity += 0.001*trans;
-
-		i++;
-		inside_mesh = is_inside_mesh(final_pos, collision_pos, collision_dir, collision_colour);
-	}
-	
-	if(true)//inside_mesh)
-	{
-		const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
-
-		float colour = collision_colour.r*mask.r + collision_colour.g*mask.g + collision_colour.b*mask.b;
-
-		const float trans = 1.0 - clamp(base_opacity, 0.0, 1.0);
-		base_colour += colour;//*trans;
-		base_opacity += 0.001*trans;
-
-		final_pos = collision_pos;
-		final_dir = collision_dir;
-	}
-
-//	base_colour /= i;
-	base_colour = 1 - clamp(base_colour, 0, 1);
-
-//	base_colour = stepAndOutputRNGFloat(prng_state);
-//	base_opacity = 1;
-
-	return i;
-}
-
 
 
 float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
@@ -719,8 +640,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 
 
-				const float velocity_length = 1000.0;
-				const int max_num_steps = 10;
+				const float velocity_length = 0.1;
+				const int max_num_steps = 250;
 
 				// entering mesh
 				if(dot(rays[i].direction.xyz, rayPayload.normal) <= 0.0)
@@ -779,7 +700,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						int step_count = do_random_walk_until_exits_mesh2(
 										normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
 										rays[i].sss_constant, 
-										100, 
+										max_num_steps, 
 										rays[current_buffer_index].origin.xyz, 
 										new_pos, 
 										new_dir, 
@@ -809,7 +730,6 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 							rays[current_buffer_index].in_use = true;
 							rays[current_buffer_index].level = rays[i].level + 1;
 							rays[current_buffer_index].parent_id = i;
-
 												
 							// do random walk here to get base opacity
 							vec3 new_pos = vec3(0, 0, 0);
@@ -818,7 +738,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 							int step_count = do_random_walk_until_exits_mesh2(
 											normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
 											rays[i].sss_constant, 
-											100, 
+											max_num_steps, 
 											rays[current_buffer_index].origin.xyz, 
 											new_pos, 
 											new_dir, 
@@ -847,7 +767,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 							int step_count = do_random_walk_until_exits_mesh2(
 											normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
 											rays[i].sss_constant, 
-											100, 
+											max_num_steps, 
 											rays[current_buffer_index].origin.xyz, 
 											new_pos, 
 											new_dir, 
@@ -906,12 +826,11 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 			float reflect_accum = mix(rays[i].base_color, rays[rays[i].child_reflect_id].accumulated_color, rays[i].reflection_constant);
 			float refract_accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1 - rays[i].refraction_constant);
 		
-			reflect_accum = mix(reflect_accum, rays[rays[i].child_reflect_id].sss_base_colour, rays[rays[i].child_reflect_id].sss_constant*rays[rays[i].child_reflect_id].sss_base_opacity);
-			refract_accum = mix(refract_accum, rays[rays[i].child_refract_id].sss_base_colour, rays[rays[i].child_refract_id].sss_constant*rays[rays[i].child_refract_id].sss_base_opacity);
+			//reflect_accum = mix(reflect_accum, rays[rays[i].child_reflect_id].sss_base_colour, rays[rays[i].child_reflect_id].sss_base_opacity);
+		///	refract_accum = mix(refract_accum, rays[rays[i].child_refract_id].sss_base_colour, rays[rays[i].child_refract_id].sss_base_opacity);
 
-//			reflect_accum *= rays[rays[i].child_reflect_id].sss_constant*rays[rays[i].child_reflect_id].sss_base_opacity;
-//			refract_accum *= rays[rays[i].child_refract_id].sss_constant*rays[rays[i].child_refract_id].sss_base_opacity;
-
+			reflect_accum *= rays[rays[i].child_reflect_id].sss_base_colour * rays[rays[i].child_reflect_id].sss_base_opacity;
+			refract_accum *= rays[rays[i].child_refract_id].sss_base_colour * rays[rays[i].child_refract_id].sss_base_opacity;
 
 			accum = mix(refract_accum, reflect_accum, ratio);
 		}
