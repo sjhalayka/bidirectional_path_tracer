@@ -502,59 +502,6 @@ bool is_inside_mesh(const vec3 location, inout vec3 collision_pos, inout vec3 co
 }
 
 
-
-bool is_inside_mesh2(vec3 location, inout vec3 collision_pos, inout vec3 collision_dir, inout vec3 collision_colour)
-{
-	RayPayload r = rayPayload;
-	bool is_outside = false;
-
-	const vec3 direction = vec3(0, 0, 1);
-
-	int intersection_count = 0;
-
-	while(true)
-	{
-		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, location, 0.001, direction, 10000.0, 0);
-	
-		if(rayPayload.dist == -1.0)
-			break;
-
-		location += direction*rayPayload.dist;
-
-		intersection_count++;
-	}
-
-	if(intersection_count % 2 == 0)
-	{
-		is_outside = true;
-	}
-
-	if(is_outside)
-	{
-		collision_pos = location;// + direction;
-	}
-	else
-	{
-		collision_pos = location + direction*rayPayload.dist;
-	}
-
-	collision_dir = direction;
-
-	collision_colour = rayPayload.color;
-
-
-	rayPayload = r;
-	return !is_outside;
-}
-
-
-
-
-
-
-
-
-
 int do_random_walk_until_exits_mesh2(const vec3 velocity, const float sss_constant, const int max_walk_length, const vec3 pos, inout vec3 final_pos, inout vec3 final_dir, inout float base_colour, inout float base_opacity, const float hue)
 {
 	float vel_length = length(velocity);
@@ -570,7 +517,7 @@ int do_random_walk_until_exits_mesh2(const vec3 velocity, const float sss_consta
 	vec3 collision_dir = vec3(0, 0, 0);
 	vec3 collision_colour = vec3(0, 0, 0);
 
-	bool inside_mesh = is_inside_mesh2(final_pos, collision_pos, collision_dir, collision_colour);
+	bool inside_mesh = is_inside_mesh(final_pos, collision_pos, collision_dir, collision_colour);
 
 	while(inside_mesh && i <= max_walk_length)
 	{	
@@ -634,7 +581,7 @@ int do_random_walk_until_exits_mesh(const float density, const int max_walk_leng
 	vec3 collision_dir = vec3(0, 0, 0);
 	vec3 collision_colour = vec3(0, 0, 0);
 
-	bool inside_mesh = is_inside_mesh2(final_pos, collision_pos, collision_dir, collision_colour);
+	bool inside_mesh = is_inside_mesh(final_pos, collision_pos, collision_dir, collision_colour);
 
 	while(inside_mesh && i <= max_walk_length)
 	{	
