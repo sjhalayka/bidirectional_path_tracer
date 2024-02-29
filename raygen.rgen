@@ -495,7 +495,7 @@ bool is_inside_mesh(const vec3 location, inout vec3 collision_pos, inout vec3 co
 	}
 
 	collision_dir = direction;
-	collision_colour = vec3(1, 1, 1);//rayPayload.color;
+	collision_colour = rayPayload.color;
 
 	rayPayload = r;
 	return !is_outside;
@@ -773,7 +773,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 
 				const float velocity_length = 1000.0;
-
+				const int max_num_steps = 10;
 
 				// entering mesh
 				if(dot(rays[i].direction.xyz, rayPayload.normal) <= 0.0)
@@ -799,7 +799,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						int step_count = do_random_walk_until_exits_mesh2(
 										normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
 										rays[i].sss_constant, 
-										100, 
+										max_num_steps, 
 										rays[current_buffer_index].origin.xyz, 
 										new_pos, 
 										new_dir, 
@@ -824,7 +824,6 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						rays[current_buffer_index].external_refraction_ray = false;
 						rays[current_buffer_index].internal_subsurface_ray = false;
 						rays[current_buffer_index].parent_id = i;
-
 
 						// do random walk here to get base opacity
 						vec3 new_pos = vec3(0, 0, 0);
