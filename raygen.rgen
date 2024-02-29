@@ -307,7 +307,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 
 			if(stepAndOutputRNGFloat(prng_state) <= rayPayload.subsurface)
 			{
-				 o_scatter = hitPos - rayPayload.normal * 0.001 + RandomUnitVector(prng_state)*0.001;// hitPos.xyz - rayPayload.normal * 0.001 + RandomUnitVector(prng_state)*0.001;//hitPos + rayPayload.normal * 0.01;
+				 o_scatter = hitPos - rayPayload.normal * 0.001 + RandomUnitVector(prng_state)*0.001;
 				 d_scatter = RandomUnitVector(prng_state);
 			}
 			else
@@ -797,7 +797,6 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 						if(temp_dir != vec3(0.0))
 						{
-							
 							rays[current_buffer_index].origin.xyz = hitPos.xyz + rayPayload.normal * 0.01;
 							rays[current_buffer_index].direction.xyz = temp_dir;
 							rays[current_buffer_index].external_reflection_ray = false;
@@ -886,8 +885,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 			accum = mix(rays[i].base_color, rays[rays[i].child_reflect_id].accumulated_color, rays[i].reflection_constant);
 		}
 
-		if(rays[i].child_subsurface_id != -1)
-		accum = mix(accum, rays[rays[i].child_subsurface_id].sss_base_colour, rays[rays[i].child_subsurface_id].sss_base_opacity);
+		//if(rays[i].child_subsurface_id != -1)
+		//accum = mix(accum, rays[rays[i].child_subsurface_id].sss_base_colour, rays[rays[i].child_subsurface_id].sss_base_opacity);
 
 
 		// Do tinting
