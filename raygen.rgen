@@ -832,15 +832,15 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 
 		
-	//		reflect_accum = rays[rays[i].child_reflect_id].sss_base_colour;
-	//		refract_accum = rays[rays[i].child_refract_id].sss_base_colour;
+			reflect_accum = rays[rays[i].child_reflect_id].sss_base_colour;
+			refract_accum = rays[rays[i].child_refract_id].sss_base_colour;
 
 
 
 //			reflect_accum = rays[rays[i].child_reflect_id].sss_base_colour * rays[rays[i].child_reflect_id].sss_base_opacity;
 //			refract_accum = rays[rays[i].child_refract_id].sss_base_colour * rays[rays[i].child_refract_id].sss_base_opacity;
 
-			accum = mix(refract_accum, reflect_accum, ratio);
+			accum = mix(refract_accum, reflect_accum, 0);
 		}
 		else if(pure_refraction)
 		{
