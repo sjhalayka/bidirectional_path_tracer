@@ -580,6 +580,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 		rays[i].sss_base_opacity = 0;
 		rays[i].sss_base_colour = 0;
 		rays[i].sss_constant = 0;
+
+
 	}
 
 	rays[0].direction = direction;
@@ -662,6 +664,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						rays[current_buffer_index].internal_subsurface_ray = false;
 						rays[current_buffer_index].parent_id = i;
 
+
+						/*
 						// do random walk here to get base opacity
 						vec3 new_pos = vec3(0, 0, 0);
 						vec3 new_dir = vec3(0, 0, 0);
@@ -680,6 +684,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 						//rays[current_buffer_index].origin.xyz = new_pos;
 						//rays[current_buffer_index].direction.xyz = new_dir;
+						*/
 
 						current_buffer_index++;
 					}
@@ -699,6 +704,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						rays[current_buffer_index].internal_subsurface_ray = false;
 						rays[current_buffer_index].parent_id = i;
 
+
+						/*
 						// do random walk here to get base opacity
 						vec3 new_pos = vec3(0, 0, 0);
 						vec3 new_dir = vec3(0, 0, 0);
@@ -713,7 +720,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 										rays[current_buffer_index].sss_base_colour, 
 										rays[current_buffer_index].sss_base_opacity, 
 										hue);
-										
+										*/
 
 				//		rays[current_buffer_index].origin.xyz = new_pos;
 				//		rays[current_buffer_index].direction.xyz = new_dir;
@@ -745,6 +752,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 							vec3 new_pos = vec3(0, 0, 0);
 							vec3 new_dir = vec3(0, 0, 0);
 	
+	/*
 							int step_count = do_random_walk_until_exits_mesh2(
 											normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
 											rays[i].sss_constant, 
@@ -758,6 +766,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 					//		rays[current_buffer_index].origin.xyz = new_pos;
 					//		rays[current_buffer_index].direction.xyz = new_dir;
+					*/
+
 
 							current_buffer_index++;
 						}
@@ -773,6 +783,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 							rays[current_buffer_index].external_refraction_ray = false;
 							rays[current_buffer_index].parent_id = i;
 
+
+							/*
 							// do random walk here to get base opacity
 							vec3 new_pos = vec3(0, 0, 0);
 							vec3 new_dir = vec3(0, 0, 0);
@@ -790,6 +802,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 						//	rays[current_buffer_index].origin.xyz = new_pos;
 						//	rays[current_buffer_index].direction.xyz = new_dir;
+						*/
 
 							current_buffer_index++;
 						}
@@ -855,19 +868,19 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 //			reflect_accum = rays[rays[i].child_reflect_id].sss_base_colour * rays[rays[i].child_reflect_id].sss_base_opacity;
 //			refract_accum = rays[rays[i].child_refract_id].sss_base_colour * rays[rays[i].child_refract_id].sss_base_opacity;
 
-			accum = mix(refract_accum, reflect_accum, 0);
+			accum = mix(refract_accum, reflect_accum, ratio);
 		}
 		else if(pure_refraction)
 		{
 			accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1.0 - rays[i].refraction_constant);	
 			
-			accum = mix(accum, rays[rays[i].child_refract_id].sss_base_colour, rays[rays[i].child_refract_id].sss_base_opacity);
+			//accum = mix(accum, rays[rays[i].child_refract_id].sss_base_colour, rays[rays[i].child_refract_id].sss_base_opacity);
 		}
 		else if(pure_reflection)
 		{
 			accum = mix(rays[i].base_color, rays[rays[i].child_reflect_id].accumulated_color, rays[i].reflection_constant);
 
-			accum = mix(accum, rays[rays[i].child_reflect_id].sss_base_colour, rays[rays[i].child_reflect_id].sss_base_opacity);
+			//accum = mix(accum, rays[rays[i].child_reflect_id].sss_base_colour, rays[rays[i].child_reflect_id].sss_base_opacity);
 
 		}
 
