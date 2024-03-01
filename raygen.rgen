@@ -647,6 +647,11 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				dist_opacity = clamp(dist_opacity, 0.0, 1.0);
 				rays[i].base_color = mix(rays[i].base_color, dist_color, dist_opacity);
 
+				
+				const float velocity_length = 0.1;
+				const int max_num_steps = 100;
+
+
 				// entering mesh
 				if(dot(rays[i].direction.xyz, rayPayload.normal) <= 0.0)
 				{
@@ -665,7 +670,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						rays[current_buffer_index].parent_id = i;
 
 
-												/*
+												
 						// do random walk here to get base opacity
 						vec3 new_pos = vec3(0, 0, 0);
 						vec3 new_dir = vec3(0, 0, 0);
@@ -684,7 +689,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 						//rays[current_buffer_index].origin.xyz = new_pos;
 						//rays[current_buffer_index].direction.xyz = new_dir;
-						*/
+						
 
 
 
@@ -708,7 +713,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 
 
-												/*
+												
 						// do random walk here to get base opacity
 						vec3 new_pos = vec3(0, 0, 0);
 						vec3 new_dir = vec3(0, 0, 0);
@@ -723,7 +728,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 										rays[current_buffer_index].sss_base_colour, 
 										rays[current_buffer_index].sss_base_opacity, 
 										hue);
-										*/
+										
 
 
 
@@ -757,7 +762,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 							vec3 new_pos = vec3(0, 0, 0);
 							vec3 new_dir = vec3(0, 0, 0);
 	
-	/*
+	
 							int step_count = do_random_walk_until_exits_mesh2(
 											normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
 											rays[i].sss_constant, 
@@ -771,7 +776,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 					//		rays[current_buffer_index].origin.xyz = new_pos;
 					//		rays[current_buffer_index].direction.xyz = new_dir;
-					*/
+					
 
 
 
@@ -797,7 +802,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 							vec3 new_pos = vec3(0, 0, 0);
 							vec3 new_dir = vec3(0, 0, 0);
 	
-	/*
+	
 							int step_count = do_random_walk_until_exits_mesh2(
 											normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
 											rays[i].sss_constant, 
@@ -811,7 +816,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 					//		rays[current_buffer_index].origin.xyz = new_pos;
 					//		rays[current_buffer_index].direction.xyz = new_dir;
-					*/
+					
 
 
 
@@ -867,7 +872,9 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 			float refract_accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1 - rays[i].refraction_constant);
 		
 			
-			//refract_accum *= rays[i].sss_base_colour*rays[i].sss_base_opacity;
+			refract_accum = rays[rays[i].child_refract_id].sss_base_colour*rays[rays[i].child_refract_id].sss_base_opacity;
+			reflect_accum = rays[rays[i].child_reflect_id].sss_base_colour*rays[rays[i].child_reflect_id].sss_base_opacity;
+
 
 			accum = mix(refract_accum, reflect_accum, ratio);
 		}
