@@ -539,7 +539,7 @@ int do_random_walk_until_exits_mesh2(const vec3 velocity, const float sss_consta
 
 		const float trans = 1.0 - clamp(base_opacity, 0.0, 1.0);
 		base_colour += 0.1;//colour*trans;
-		base_opacity += 0.05;
+		base_opacity += 0.01;
 
 		i++;
 	}
