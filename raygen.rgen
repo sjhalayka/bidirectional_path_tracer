@@ -872,8 +872,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 			float refract_accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1 - rays[i].refraction_constant);
 		
 			
-			refract_accum = rays[rays[i].child_refract_id].sss_base_colour*rays[rays[i].child_refract_id].sss_base_opacity;
-			reflect_accum = rays[rays[i].child_reflect_id].sss_base_colour*rays[rays[i].child_reflect_id].sss_base_opacity;
+			//refract_accum = rays[rays[i].child_refract_id].sss_base_opacity;//*rays[rays[i].child_refract_id].sss_base_opacity;
+			//reflect_accum = rays[rays[i].child_reflect_id].sss_base_opacity;//*rays[rays[i].child_reflect_id].sss_base_opacity;
 
 
 			accum = mix(refract_accum, reflect_accum, ratio);
