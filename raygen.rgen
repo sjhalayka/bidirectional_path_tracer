@@ -27,6 +27,8 @@ struct ray
 
 	float base_color;
 	float accumulated_color;
+	//float base_opacity;
+
 	
 	float sss_base_opacity;
 	float sss_base_colour;
@@ -87,7 +89,7 @@ vec3 aabb_max = vec3(2.5, 2.5, 2.5);
 
 const float opacity_factor = 0.01;
 
-vec3 fog_colour = vec3(1.0, 0.9, 0.8);
+vec3 fog_colour = vec3(1.0, 1.0, 1.0);
 
 
 
@@ -297,6 +299,8 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 		if(rayPayload.color.r > 1
 		|| rayPayload.color.g > 1
 		|| rayPayload.color.b > 1)
+
+
 		{
 			ret_colour += local_colour;
 			break;
@@ -399,10 +403,8 @@ float get_omni_radiance_backward(const int samples, const int steps, const vec3 
 
 
 
-void get_fog(inout float dist_color, inout float dist_opacity, vec3 origin, vec3 direction, vec3 hitPos, vec3 hitColor, float hue, float eta)
+void get_fog(inout float dist_color, inout float dist_opacity, vec3 origin, vec3 direction, vec3 hitPos, float hitColor, float hue, float eta)
 {
-	dist_color = dist_opacity = 0;
-
 	vec3 start = origin;
 	vec3 end = origin;
 
@@ -446,7 +448,7 @@ void get_fog(inout float dist_color, inout float dist_opacity, vec3 origin, vec3
 		for(int j = 0; j < num_steps; j++, curr_step += step)
 		{
 			const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
-			float colour = hitColor.r*mask.r + hitColor.g*mask.g + hitColor.b*mask.b;//hitColor;//get_omni_radiance_backward(10, 5, curr_step, hue, eta);
+			float colour = hitColor;//hitColor.r*mask.r + hitColor.g*mask.g + hitColor.b*mask.b;//hitColor;//get_omni_radiance_backward(10, 5, curr_step, hue, eta);
 
 			float noise = noise3(curr_step, 1.0);
 
@@ -458,7 +460,7 @@ void get_fog(inout float dist_color, inout float dist_opacity, vec3 origin, vec3
 
 			const float trans = 1.0 - clamp(dist_opacity, 0.0, 1.0);
 			dist_color += colour*trans;
-			dist_opacity += 0.05*colour*trans;
+			dist_opacity += 0.01*colour*trans;
 		}
 	}
 
@@ -517,7 +519,7 @@ int do_random_walk_until_exits_mesh2(const vec3 velocity, const float sss_consta
 	
 	final_dir = velocity;
 	
-	base_opacity = 0.01;
+	base_opacity = 0.05;
 	base_colour = 0.0;
 
 	int i = 1;
@@ -537,7 +539,7 @@ int do_random_walk_until_exits_mesh2(const vec3 velocity, const float sss_consta
 
 		const float trans = 1.0 - clamp(base_opacity, 0.0, 1.0);
 		base_colour += 0.1;//colour*trans;
-		base_opacity += 0.01;
+		base_opacity += 0.05;
 
 		i++;
 	}
@@ -640,8 +642,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				// Do some fog in an AABB
 				float dist_color = 0.0;
 				float dist_opacity = 0.0;
-				//get_fog(dist_color, dist_opacity, rays[i].origin.xyz, rays[i].direction.xyz, hitPos.xyz, fog_colour, hue, eta);
-				dist_color = clamp(dist_color, 0.0, 1.0);
+				//get_fog(dist_color, dist_opacity, rays[i].origin.xyz, rays[i].direction.xyz, hitPos.xyz, rays[i].base_color, hue, eta);
+				//dist_color = clamp(dist_color, 0.0, 1.0);
 				dist_opacity = clamp(dist_opacity, 0.0, 1.0);
 				rays[i].base_color = mix(rays[i].base_color, dist_color, dist_opacity);
 
@@ -870,8 +872,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 			float refract_accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1 - rays[i].refraction_constant);
 		
 			
-			//refract_accum = rays[rays[i].child_refract_id].sss_base_colour;//*rays[rays[i].child_refract_id].sss_base_opacity;
-			//reflect_accum = rays[rays[i].child_reflect_id].sss_base_colour;//*rays[rays[i].child_reflect_id].sss_base_opacity;
+			refract_accum = rays[rays[i].child_refract_id].sss_base_opacity;//*rays[rays[i].child_refract_id].sss_base_opacity;
+			reflect_accum = rays[rays[i].child_reflect_id].sss_base_opacity;//*rays[rays[i].child_reflect_id].sss_base_opacity;
 
 
 			accum = mix(refract_accum, reflect_accum, ratio);
