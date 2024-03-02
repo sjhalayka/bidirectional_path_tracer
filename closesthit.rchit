@@ -104,16 +104,16 @@ void main()
 	rayPayload.subsurface = 1.0;//texture(normalSampler, uv).g;
 	rayPayload.density = 0.0;//texture(normalSampler, uv).b;
 	
-	rayPayload.reflector = texture(normalSampler, uv).a;
+	rayPayload.reflector = 0;//texture(normalSampler, uv).a;
 
 
-			rayPayload.reflector = 0.0;
+
 
 	// Make the transparent sphere reflective
 	if(rayPayload.opacity == 0.0)
 	{
 		rayPayload.opacity = 0.01;
-		rayPayload.reflector = 0.99;
+		rayPayload.reflector = 0.5;
 
 	//	rayPayload.color = vec3(1,1,1);
 //
@@ -125,7 +125,7 @@ void main()
 	}
 	else
 	{
-
+			rayPayload.reflector = 0.0;
 		rayPayload.subsurface = 0.0;
 	}
 
@@ -143,7 +143,7 @@ void main()
 */
 
 
-	if(rayPayload.reflector == 1.0)
+	if(false)//rayPayload.reflector == 1.0)
 	{
 	//	rayPayload.color.r = 1.0;
 	//	rayPayload.color.g = 0.5;
