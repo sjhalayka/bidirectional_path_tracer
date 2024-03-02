@@ -101,7 +101,7 @@ void main()
 
 
 	// Do subsurface scattering coefficient and subsurface density
-	rayPayload.subsurface = 1.0;//texture(normalSampler, uv).g;
+	rayPayload.subsurface = 0.0;//texture(normalSampler, uv).g;
 	rayPayload.density = 0.0;//texture(normalSampler, uv).b;
 	
 	rayPayload.reflector = 0;//texture(normalSampler, uv).a;
@@ -113,7 +113,7 @@ void main()
 	if(rayPayload.opacity == 0.0)
 	{
 		rayPayload.opacity = 0.01;
-		rayPayload.reflector = 0.5;
+		rayPayload.reflector = 0.99;
 
 	//	rayPayload.color = vec3(1,1,1);
 //
@@ -125,25 +125,16 @@ void main()
 	}
 	else
 	{
-			rayPayload.reflector = 0.0;
+//			rayPayload.reflector = 0.0;
 		rayPayload.subsurface = 0.0;
 	}
 
 
 
 
-/*	if(rayPayload.color.r == 1.0 &&
-		rayPayload.color.g == 1.0 &&
-		rayPayload.color.b == 1.0)
-		{
-				rayPayload.color.r = 1.0;
-		rayPayload.color.g = 0.75;
-		rayPayload.color.b = 0.50;
-	}
-*/
 
 
-	if(false)//rayPayload.reflector == 1.0)
+	if(rayPayload.reflector == 1.0)
 	{
 	//	rayPayload.color.r = 1.0;
 	//	rayPayload.color.g = 0.5;
