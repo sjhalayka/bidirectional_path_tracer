@@ -315,20 +315,20 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 
 			vec3 o_scatter, d_scatter;
 
-			if(stepAndOutputRNGFloat(prng_state) <= rayPayload.subsurface)
-			{
+		//	if(stepAndOutputRNGFloat(prng_state) <= rayPayload.subsurface)
+		//	{
 				 o_scatter = hitPos - rayPayload.normal * 0.001 + RandomUnitVector(prng_state)*0.001;
 				 d_scatter = RandomUnitVector(prng_state);
-			}
-			else
-			{
-				 o_scatter = hitPos + rayPayload.normal * 0.01;
-				 d_scatter = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
-			}
+		//	}
+		//	else
+		//	{
+				 vec3 o_transparent = hitPos + rayPayload.normal * 0.01;
+				 vec3 d_transparent = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
+		//	}
 
 
-			o = mix(o_scatter, o_reflect, rayPayload.reflector);
-			d = normalize(mix(d_scatter, d_reflect, rayPayload.reflector));
+			o = mix(o_scatter, o_transparent, 1 - rayPayload.subsurface);
+			d = normalize(mix(d_scatter, d_transparent, 1 - rayPayload.subsurface));
 		}
 		else
 		{
@@ -616,7 +616,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				if(ubo.screenshot_mode)
 					rays[i].base_color = get_radiance_backward(1000, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 				else
-					rays[i].base_color = get_radiance_backward(25, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+					rays[i].base_color = get_radiance_backward(250, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 
 				traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, rays[i].origin.xyz, tmin, rays[i].direction.xyz, tmax, 0);
 								
@@ -643,7 +643,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				float dist_color = 0.0;
 				float dist_opacity = 0.0;
 				//get_fog(dist_color, dist_opacity, rays[i].origin.xyz, rays[i].direction.xyz, hitPos.xyz, rays[i].base_color, hue, eta);
-				//dist_color = clamp(dist_color, 0.0, 1.0);
+				dist_color = clamp(dist_color, 0.0, 1.0);
 				dist_opacity = clamp(dist_opacity, 0.0, 1.0);
 				rays[i].base_color = mix(rays[i].base_color, dist_color, dist_opacity);
 
