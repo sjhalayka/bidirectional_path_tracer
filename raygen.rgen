@@ -310,25 +310,91 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 
 		if(stepAndOutputRNGFloat(prng_state) <= rayPayload.opacity)
 		{
+
+
+		
+			RayPayload r = rayPayload;
+	
+
+
+
+	
 			vec3 o_reflect = hitPos + rayPayload.normal * 0.01;
 			vec3 d_reflect = reflect(d, rayPayload.normal);
 
-			vec3 o_scatter, d_scatter;
 
-		//	if(stepAndOutputRNGFloat(prng_state) <= rayPayload.subsurface)
-		//	{
-				 o_scatter = hitPos - rayPayload.normal * 0.001 + RandomUnitVector(prng_state)*0.001;
-				 d_scatter = RandomUnitVector(prng_state);
-		//	}
-		//	else
-		//	{
-				 vec3 o_transparent = hitPos + rayPayload.normal * 0.01;
-				 vec3 d_transparent = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
-		//	}
+			traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o_reflect, tmin, d_reflect, tmax, 0);
+
+			total += mask.r;
+			total += mask.g;
+			total += mask.b;
+
+			if(doing_refraction_caustic)
+			{
+				local_colour += caustic_energy*(rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
+	//			doing_refraction_caustic = false;
+			}
+			else
+			{
+				local_colour += rayPayload.reflector*(rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
+			}
+
+			// If hit the sky
+			if(rayPayload.dist == -1.0)
+			{
+				ret_colour += local_colour;
+				break;
+			}
+
+				vec3 o_subsurface, d_subsurface;
+
+					 o_subsurface = hitPos - rayPayload.normal * 0.001 + RandomUnitVector(prng_state)*0.001;
+					 d_subsurface = RandomUnitVector(prng_state);
 
 
-			o = mix(o_scatter, o_transparent, 1 - rayPayload.subsurface);
-			d = normalize(mix(d_scatter, d_transparent, 1 - rayPayload.subsurface));
+
+					
+
+			traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o_subsurface, tmin, d_subsurface, tmax, 0);
+
+			total += mask.r;
+			total += mask.g;
+			total += mask.b;
+
+			if(doing_refraction_caustic)
+			{
+				local_colour += caustic_energy*(rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
+//				doing_refraction_caustic = false;
+			}
+			else
+			{
+				local_colour += (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
+			}
+
+			// If hit the sky
+			if(rayPayload.dist == -1.0)
+			{
+				ret_colour += local_colour;
+				break;
+			}
+
+
+
+
+
+			
+
+
+
+
+						rayPayload = r;
+
+					 vec3 o_scatter = hitPos + rayPayload.normal * 0.01;
+					 vec3 d_scatter = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
+
+
+				o = o_scatter;//mix(o_scatter, o_transparent, 1 - rayPayload.subsurface);
+				d = d_scatter;//normalize(mix(d_scatter, d_transparent, 1 - rayPayload.subsurface));
 		}
 		else
 		{
