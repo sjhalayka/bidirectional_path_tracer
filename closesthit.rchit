@@ -104,7 +104,7 @@ void main()
 	rayPayload.subsurface = 1.0;//texture(normalSampler, uv).g;
 	rayPayload.density = 0.0;//texture(normalSampler, uv).b;
 	
-	rayPayload.reflector = 0;//texture(normalSampler, uv).a;
+	rayPayload.reflector = texture(normalSampler, uv).a;
 
 
 
