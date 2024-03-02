@@ -241,7 +241,7 @@ bool BBoxIntersect(const vec3 boxMin, const vec3 boxMax, const vec3 origin, cons
 }
 
 
-
+ 
 
 float trace_path_backward(const int steps, const vec3 origin, const vec3 direction, const float hue, const float eta)
 {
@@ -249,7 +249,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 	vec3 d = direction;
 
 	const float energy = 1;
-	const float caustic_energy = 1;//energy;
+	const float caustic_energy = 10;//energy;
 
 	float ret_colour = 0;
 	float local_colour = energy;
@@ -461,7 +461,7 @@ void get_fog(inout float dist_color, inout float dist_opacity, vec3 origin, vec3
 		for(int j = 0; j < num_steps; j++, curr_step += step)
 		{
 			const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
-			float colour = get_omni_radiance_backward(10, 25, curr_step, hue, eta);
+			float colour = get_omni_radiance_backward(10, 5, curr_step, hue, eta);
 
 			float noise = noise3(curr_step, 1.0);
 
@@ -655,7 +655,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				// Do some fog in an AABB
 				float dist_color = 0.0;
 				float dist_opacity = 0.0;
-				get_fog(dist_color, dist_opacity, rays[i].origin.xyz, rays[i].direction.xyz, hitPos.xyz, rays[i].base_color, hue, eta);
+				//get_fog(dist_color, dist_opacity, rays[i].origin.xyz, rays[i].direction.xyz, hitPos.xyz, rays[i].base_color, hue, eta);
 				dist_color = clamp(dist_color, 0.0, 1.0);
 				dist_opacity = clamp(dist_opacity, 0.0, 1.0);
 				rays[i].base_color = mix(rays[i].base_color, dist_color, dist_opacity);
@@ -689,7 +689,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						vec3 new_dir = vec3(0, 0, 0);
 	
 						int step_count = do_random_walk_until_exits_mesh2(
-										vec3(0,0,0),//normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
+										normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
 										rays[i].sss_constant, 
 										max_num_steps, 
 										rays[current_buffer_index].origin.xyz, 
@@ -700,7 +700,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 										hue);
 
 
-						//rays[current_buffer_index].origin.xyz = new_pos;
+						rays[current_buffer_index].origin.xyz = new_pos;
 						//rays[current_buffer_index].direction.xyz = new_dir;
 						
 
@@ -888,11 +888,11 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 			reflect_accum = mix(reflect_accum, rays[rays[i].child_reflect_id].sss_base_colour, rays[rays[i].child_reflect_id].sss_base_opacity);
 
 
-			//refract_accum = rays[rays[i].child_refract_id].sss_base_opacity;//*rays[rays[i].child_refract_id].sss_base_opacity;
-			//reflect_accum = rays[rays[i].child_reflect_id].sss_base_opacity;//*rays[rays[i].child_reflect_id].sss_base_opacity;
+			refract_accum = rays[rays[i].child_refract_id].sss_base_opacity *rays[rays[i].child_refract_id].sss_base_colour;
+				reflect_accum = rays[rays[i].child_reflect_id].sss_base_opacity *rays[rays[i].child_reflect_id].sss_base_colour;
 
 
-			accum = mix(refract_accum, reflect_accum, ratio);
+			accum = mix(refract_accum, reflect_accum, 1);
 		}
 		else if(pure_refraction)
 		{
