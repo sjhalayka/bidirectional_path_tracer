@@ -82,6 +82,55 @@ public:
 	VkDescriptorSet materialSet;
 
 
+	struct StagingBuffer {
+		VkBuffer buffer;
+		VkDeviceMemory memory;
+	} ray_test_staging;
+
+
+	struct ray_test
+	{
+		glm::vec4 direction;
+		glm::vec4 origin;
+
+		bool in_use;
+
+		glm::vec3 normal;
+		float depth;
+
+		int child_refract_id;
+		int child_reflect_id;
+		int child_subsurface_id;
+		int parent_id;
+
+		float base_color;
+		float accumulated_color;
+		//float base_opacity;
+
+		float sss_base_opacity;
+		float sss_base_colour;
+
+		float reflection_constant;
+		float refraction_constant;
+		float sss_constant;
+		float sss_density;
+
+		float tint_constant;
+		glm::vec3 tint_colour;
+
+		bool external_reflection_ray;
+		bool external_refraction_ray;
+		bool internal_subsurface_ray;
+
+		int level;
+
+	};
+
+
+	const size_t ray_buffer_size = 8;
+
+	ray_test r[8];
+
 
 	/*
 		Create the descriptor sets used for the ray tracing dispatch
@@ -93,7 +142,7 @@ public:
 			{ VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1 },
 			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 },
 			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 },
 			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 },
 		};
 		VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = vks::initializers::descriptorPoolCreateInfo(poolSizes, 2);
@@ -122,6 +171,20 @@ public:
 		VkDescriptorBufferInfo vertexBufferDescriptor{ scene.vertices.buffer, 0, VK_WHOLE_SIZE };
 		VkDescriptorBufferInfo indexBufferDescriptor{ scene.indices.buffer, 0, VK_WHOLE_SIZE };
 
+		size_t ray_testBufferSize = ray_buffer_size * sizeof(ray_test);
+
+		VK_CHECK_RESULT(vulkanDevice->createBuffer(
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			ray_testBufferSize,
+			&ray_test_staging.buffer,
+			&ray_test_staging.memory,
+			&r[0]));
+
+		VkDescriptorBufferInfo ray_testBufferDescriptor{ ray_test_staging.buffer, 0, VK_WHOLE_SIZE };
+
+
+
 		std::vector<VkWriteDescriptorSet> writeDescriptorSets = {
 			// Binding 0: Top level acceleration structure
 			accelerationStructureWrite,
@@ -133,6 +196,8 @@ public:
 			vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3, &vertexBufferDescriptor),
 			// Binding 4: Scene index buffer
 			vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4, &indexBufferDescriptor),
+			// Binding 5: Scene ray buffer
+			vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 5, &ray_testBufferDescriptor),
 
 			// Binding 0: Base color texture
 			vks::initializers::writeDescriptorSet(materialSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &scene.materials[0].baseColorTexture->descriptor),
@@ -158,6 +223,9 @@ public:
 			vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 3),
 			// Binding 4: Index buffer
 			vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 4),
+			// Binding 5: raytest buffer
+			vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 5),
+
 		};
 
 		VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI = vks::initializers::descriptorSetLayoutCreateInfo(setLayoutBindings);
@@ -261,7 +329,7 @@ public:
 			{ VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1 },
 			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 },
 			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2 }
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 }
 		};
 		VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = vks::initializers::descriptorPoolCreateInfo(poolSizes, 1);
 		VK_CHECK_RESULT(vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, nullptr, &screenshotDescriptorPool));
@@ -285,6 +353,21 @@ public:
 		VkDescriptorImageInfo storageImageDescriptor{ VK_NULL_HANDLE, screenshotStorageImage.view, VK_IMAGE_LAYOUT_GENERAL };
 		VkDescriptorBufferInfo vertexBufferDescriptor{ scene.vertices.buffer, 0, VK_WHOLE_SIZE };
 		VkDescriptorBufferInfo indexBufferDescriptor{ scene.indices.buffer, 0, VK_WHOLE_SIZE };
+	
+
+
+		size_t ray_testBufferSize = ray_buffer_size * sizeof(ray_test);
+
+		VK_CHECK_RESULT(vulkanDevice->createBuffer(
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			ray_testBufferSize,
+			&ray_test_staging.buffer,
+			&ray_test_staging.memory,
+			&r[0]));
+
+		VkDescriptorBufferInfo ray_testBufferDescriptor{ ray_test_staging.buffer, 0, VK_WHOLE_SIZE };
+
 
 		std::vector<VkWriteDescriptorSet> writeDescriptorSets = {
 			// Binding 0: Top level acceleration structure
@@ -297,6 +380,9 @@ public:
 			vks::initializers::writeDescriptorSet(screenshotDescriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3, &vertexBufferDescriptor),
 			// Binding 4: Scene index buffer
 			vks::initializers::writeDescriptorSet(screenshotDescriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4, &indexBufferDescriptor),
+			// Binding 5: Scene raytest
+			vks::initializers::writeDescriptorSet(screenshotDescriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 5, &ray_testBufferDescriptor),
+
 		};
 		vkUpdateDescriptorSets(device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, VK_NULL_HANDLE);
 	}
@@ -814,11 +900,11 @@ public:
 				indexBuffer,
 				vertexBuffer,
 				gltfimages,
-				"C:/temp/rob_rau_cornell/gltf/cornell.gltf",
+				//"C:/temp/rob_rau_cornell/gltf/cornell.gltf",
 				//"C:/temp/rob_rau_cornell/circle_light/circle_light.gltf",
 				//"C:/temp/rob_rau_cornell/sphere_light/sphere_light.gltf",
-				//"C:/temp/rob_rau_cornell/simple_building/simple_building.gltf",
-				//"C:/temp/rob_rau_cornell/bunny2/bunny2.gltf",
+				///"C:/temp/rob_rau_cornell/simple_building/simple_building.gltf",
+				"C:/temp/rob_rau_cornell/bunny2/bunny2.gltf",
 				//"C:/temp/rob_rau_cornell/bunny2/bunny_array.gltf",
 				//"C:/temp/rob_rau_cornell/prism3/cornell_prism3.gltf",
 				//"C:/temp/rob_rau_cornell/barrel/barrel.gltf",
