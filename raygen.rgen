@@ -634,7 +634,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				used_count++;
 
 				if(ubo.screenshot_mode)
-					ssbo_rays[i].base_color = get_radiance_backward(1000, 5, ssbo_rays[i].origin.xyz, ssbo_rays[i].direction.xyz, hue, eta);
+					ssbo_rays[i].base_color = get_radiance_backward(250, 5, ssbo_rays[i].origin.xyz, ssbo_rays[i].direction.xyz, hue, eta);
 				else
 					ssbo_rays[i].base_color = get_radiance_backward(250, 5, ssbo_rays[i].origin.xyz, ssbo_rays[i].direction.xyz, hue, eta);
 
