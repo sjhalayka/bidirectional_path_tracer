@@ -118,49 +118,12 @@ layout(binding = 2, set = 0) uniform UBO
 } ubo;
 
 
-struct test_ray
-{
-	vec4 direction;
-	vec4 origin;
-	
-	bool in_use;
-
-	vec3 normal;
-	float depth;
-
-	int child_refract_id;
-	int child_reflect_id;
-	int child_subsurface_id;
-	int parent_id;
-
-	float base_color;
-	float accumulated_color;
-	//float base_opacity;
-
-	float sss_base_opacity;
-	float sss_base_colour;
-
-	float reflection_constant;
-	float refraction_constant;
-	float sss_constant;
-	float sss_density;
-
-	float tint_constant;
-	vec3 tint_colour;
-
-	bool external_reflection_ray;
-	bool external_refraction_ray;
-	bool internal_subsurface_ray;
-
-	int level;
-};
-
 
 layout(binding = 3, set = 0) buffer Vertices { vec4 v[]; } vertices;
 layout(binding = 4, set = 0) buffer Indices { uint i[]; } indices;
-layout(binding = 5, set = 0) buffer Rays { test_ray r[]; } rays;
+layout(binding = 5, set = 0) buffer Rays { ray r[]; } rays;
 
-
+//ray rays[buffer_size];
 
 
 
@@ -623,11 +586,12 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 	ray rays[buffer_size];
 	int current_buffer_index = 0;
 
+
 	uint rayFlags = gl_RayFlagsOpaqueEXT;
 	uint cullMask = 0xff;
 	float tmin = 0.001;
 	float tmax = 10000.0;
-
+	
 	// Step one: make tree of ray segments
 	for(int i = 0; i < buffer_size; i++)
 	{
@@ -647,6 +611,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 		rays[i].sss_base_opacity = 0;
 		rays[i].sss_base_colour = 0;
 	}
+
 
 	rays[0].direction = direction;
 	rays[0].origin = origin;

@@ -184,6 +184,29 @@ public:
 		VkDescriptorBufferInfo ray_testBufferDescriptor{ ray_test_staging.buffer, 0, VK_WHOLE_SIZE };
 
 
+		//VkBufferMemoryBarrier barrier = {};
+		//barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		//barrier.srcAccessMask = VK_ACCESS_NONE;
+		//barrier.dstAccessMask = VK_ACCESS_NONE;
+		//barrier.buffer = ray_test_staging.buffer;
+		//barrier.size = ray_testBufferSize;
+
+
+		//VkCommandBuffer cmdbuf = vulkanDevice->createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+
+	
+		//vkCmdPipelineBarrier(
+		//	cmdbuf,
+		//	VK_PIPELINE_STAGE_NONE,
+		//	VK_PIPELINE_STAGE_NONE,
+		//	0,
+		//	0, nullptr,
+		//	1, &barrier,
+		//	0, nullptr
+		//);
+
+		//vulkanDevice->flushCommandBuffer(cmdbuf, queue);
+
 
 		std::vector<VkWriteDescriptorSet> writeDescriptorSets = {
 			// Binding 0: Top level acceleration structure
