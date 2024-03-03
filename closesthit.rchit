@@ -3,45 +3,6 @@
 #extension GL_EXT_nonuniform_qualifier : enable
 
 
-
-
-struct ray
-{
-	vec4 direction;
-	vec4 origin;
-	
-	bool in_use;
-
-	vec3 normal;
-	float depth;
-
-	int child_refract_id;
-	int child_reflect_id;
-	int child_subsurface_id;
-	int parent_id;
-
-	float base_color;
-	float accumulated_color;
-	//float base_opacity;
-
-	float sss_base_opacity;
-	float sss_base_colour;
-
-	float reflection_constant;
-	float refraction_constant;
-	float sss_constant;
-	float sss_density;
-
-	float tint_constant;
-	vec3 tint_colour;
-
-	bool external_reflection_ray;
-	bool external_refraction_ray;
-	bool internal_subsurface_ray;
-
-	int level;
-};
-
 struct RayPayload
 {
 	vec3 color;
@@ -60,7 +21,6 @@ layout(location = 2) rayPayloadEXT bool shadowed;
 
 layout(binding = 0, set = 1) uniform sampler2D baseColorSampler;
 layout(binding = 1, set = 1) uniform sampler2D normalSampler;
-//layout(binding = 2, set = 1) uniform sampler2D metallicSampler;
 
 hitAttributeEXT vec2 attribs;
 

@@ -105,7 +105,6 @@ public:
 
 		float base_color;
 		float accumulated_color;
-		//float base_opacity;
 
 		float sss_base_opacity;
 		float sss_base_colour;
@@ -127,6 +126,7 @@ public:
 	};
 
 
+	// Change this in raygen.rgen as well
 	const size_t ray_buffer_size = 8;
 
 	ray_test r[8];
