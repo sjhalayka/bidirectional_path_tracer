@@ -106,6 +106,9 @@ void main()
 	
 	rayPayload.reflector = texture(normalSampler, uv).a;
 
+	if(rayPayload.reflector < 1)
+		rayPayload.reflector = 0;
+
 
 
 

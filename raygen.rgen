@@ -532,7 +532,7 @@ int do_random_walk_until_exits_mesh2(const vec3 velocity, const float sss_consta
 	
 	final_dir = velocity;
 	
-	base_opacity = 0.05;
+	base_opacity = 0.0;
 	base_colour = 0.0;
 
 	int i = 1;
@@ -551,13 +551,13 @@ int do_random_walk_until_exits_mesh2(const vec3 velocity, const float sss_consta
 		float colour = collision_colour.r*mask.r + collision_colour.g*mask.g + collision_colour.b*mask.b;
 
 		const float trans = 1.0 - clamp(base_opacity, 0.0, 1.0);
-		base_colour += 0.1;//colour*trans;
-		base_opacity += 0.01;
+		base_colour += colour*trans;
+		base_opacity += 0.01*trans;
 
 		i++;
 	}
 
-	base_opacity = clamp(base_opacity, 0, 1);
+	//base_opacity = clamp(base_opacity, 0, 1);
 
 
 //	base_colour = mix(base_colour, 0, base_opacity);
@@ -629,7 +629,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				if(ubo.screenshot_mode)
 					rays[i].base_color = get_radiance_backward(250, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 				else
-					rays[i].base_color = get_radiance_backward(25, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+					rays[i].base_color = get_radiance_backward(250, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 
 				traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, rays[i].origin.xyz, tmin, rays[i].direction.xyz, tmax, 0);
 								
@@ -661,8 +661,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				rays[i].base_color = mix(rays[i].base_color, dist_color, dist_opacity);
 
 				
-				const float velocity_length = 0.1;
-				const int max_num_steps = 10;
+				const float velocity_length = 0.001;
+				const int max_num_steps = 100;
 
 
 				// entering mesh
@@ -687,10 +687,10 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						vec3 new_dir = vec3(0, 0, 0);
 	
 						int step_count = do_random_walk_until_exits_mesh2(
-										vec3(0,0,0),//-rayPayload.normal*velocity_length,//rays[current_buffer_index].direction.xyz)*velocity_length, 
+										vec3(0,0,0),//normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
 										rays[i].sss_constant, 
 										max_num_steps, 
-										hitPos.xyz - rayPayload.normal * 0.1f,//rays[current_buffer_index].origin.xyz, 
+										hitPos.xyz - rayPayload.normal * 0.01f + RandomUnitVector(prng_state)*0.01,//rays[current_buffer_index].origin.xyz, 
 										new_pos, 
 										new_dir, 
 										rays[current_buffer_index].sss_base_colour, 
@@ -730,7 +730,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						vec3 new_dir = vec3(0, 0, 0);
 	
 						int step_count = do_random_walk_until_exits_mesh2(
-										vec3(0,0,0),//-rayPayload.normal*velocity_length,//normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
+										normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
 										rays[i].sss_constant, 
 										max_num_steps, 
 										rays[current_buffer_index].origin.xyz,
@@ -741,7 +741,10 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 										hue);
 										
 
-
+										
+						//rays[current_buffer_index].origin.xyz = new_pos;
+						//rays[current_buffer_index].direction.xyz = new_dir;
+						
 
 						current_buffer_index++;
 					}	
@@ -775,10 +778,10 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 	
 	
 							int step_count = do_random_walk_until_exits_mesh2(
-											-rayPayload.normal*velocity_length,//normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
+											normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
 											rays[i].sss_constant, 
 											max_num_steps, 
-											hitPos.xyz - rayPayload.normal * 0.01,//rays[current_buffer_index].origin.xyz,
+											rays[current_buffer_index].origin.xyz,
 											new_pos, 
 											new_dir, 
 											rays[current_buffer_index].sss_base_colour, 
@@ -815,7 +818,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 	
 	
 							int step_count = do_random_walk_until_exits_mesh2(
-											-rayPayload.normal*velocity_length,//normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
+											normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
 											rays[i].sss_constant, 
 											max_num_steps, 
 											rays[current_buffer_index].origin.xyz,
@@ -882,17 +885,17 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 			float reflect_accum = mix(rays[i].base_color, rays[rays[i].child_reflect_id].accumulated_color, rays[i].reflection_constant);
 			float refract_accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1 - rays[i].refraction_constant);
 		
-			refract_accum = mix(refract_accum, rays[rays[i].child_refract_id].sss_base_colour, rays[rays[i].child_refract_id].sss_base_opacity);
-			reflect_accum = mix(reflect_accum, rays[rays[i].child_reflect_id].sss_base_colour, rays[rays[i].child_reflect_id].sss_base_opacity);
+			//refract_accum = mix(refract_accum, rays[rays[i].child_refract_id].sss_base_colour, pow(rays[rays[i].child_refract_id].sss_base_opacity, 1.0));
+			//reflect_accum = mix(reflect_accum, rays[rays[i].child_reflect_id].sss_base_colour, pow(rays[rays[i].child_reflect_id].sss_base_opacity, 1.0));
 
 
 			
 			
-			refract_accum =  rays[rays[i].child_refract_id].sss_base_colour;//rays[rays[i].child_refract_id].sss_base_opacity;// *rays[rays[i].child_refract_id].sss_base_colour;
-			//reflect_accum = rays[rays[i].child_reflect_id].sss_base_opacity *rays[rays[i].child_reflect_id].sss_base_colour;
+		//	refract_accum = rays[rays[i].child_refract_id].sss_base_opacity;//rays[rays[i].child_refract_id].sss_base_opacity;// *rays[rays[i].child_refract_id].sss_base_colour;
+		//	reflect_accum = rays[rays[i].child_reflect_id].sss_base_opacity;// *rays[rays[i].child_reflect_id].sss_base_colour;
 
 
-			accum = mix(refract_accum, reflect_accum, 0);
+			accum = mix(refract_accum, reflect_accum, ratio);
 		}
 		else if(pure_refraction)
 		{
