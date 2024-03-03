@@ -33,6 +33,7 @@ struct ray
 
 	float base_color;
 	float accumulated_color;
+	//float base_opacity;
 
 	float sss_base_opacity;
 	float sss_base_colour;
