@@ -463,7 +463,7 @@ void get_fog(inout float dist_color, inout float dist_opacity, vec3 origin, vec3
 			const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
 			float colour = get_omni_radiance_backward(10, 5, curr_step, hue, eta);//hitColor;//hitColor.r*mask.r + hitColor.g*mask.g + hitColor.b*mask.b;//hitColor;//get_omni_radiance_backward(10, 5, curr_step, hue, eta);
 
-			float noise = noise3(curr_step, 1.0);
+			//float noise = noise3(curr_step, 1.0);
 
 	//		noise *= noise3(curr_step, 1.0/2.0);
 	//		noise *= noise3(curr_step, 1.0/4.0);
