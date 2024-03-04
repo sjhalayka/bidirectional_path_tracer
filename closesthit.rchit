@@ -123,18 +123,14 @@ void main()
 
 		//rayPayload.subsurface = 1.0;
 	}
-	else
-	{
-//			rayPayload.reflector = 0.0;
-		rayPayload.subsurface = 0.0;
-	}
 
 
 
 
 
 
-	if(rayPayload.reflector == 1.0)
+
+	if(false)//rayPayload.reflector == 1.0)
 	{
 	//	rayPayload.color.r = 1.0;
 	//	rayPayload.color.g = 0.5;
