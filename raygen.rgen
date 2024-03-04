@@ -316,19 +316,20 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 		if(stepAndOutputRNGFloat(prng_state) <= rayPayload.opacity)
 		{
 			RayPayload r = rayPayload;
+			
+			if(rayPayload.subsurface > 0)
+			{
+				vec3 o_subsurface = hitPos - rayPayload.normal * 0.001 + RandomUnitVector(prng_state)*0.001;
+				vec3 d_subsurface = RandomUnitVector(prng_state);
 
-			vec3 o_subsurface, d_subsurface;
+				traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o_subsurface, tmin, d_subsurface, tmax, 0);
 
-			o_subsurface = hitPos - rayPayload.normal * 0.001 + RandomUnitVector(prng_state)*0.001;
-			d_subsurface = RandomUnitVector(prng_state);
+				total += mask.r;
+				total += mask.g;
+				total += mask.b;
 
-			traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o_subsurface, tmin, d_subsurface, tmax, 0);
-
-			total += mask.r;
-			total += mask.g;
-			total += mask.b;
-
-			local_colour += (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
+				local_colour += (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
+			}
 
 			if(rayPayload.reflector > 0)
 			{
@@ -349,8 +350,8 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 			vec3 o_scatter = hitPos + rayPayload.normal * 0.01;
 			vec3 d_scatter = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
 
-			o = o_scatter;//mix(o_scatter, o_transparent, 1 - rayPayload.subsurface);
-			d = d_scatter;//normalize(mix(d_scatter, d_transparent, 1 - rayPayload.subsurface));
+			o = o_scatter;
+			d = d_scatter;
 		}
 		else
 		{
@@ -570,7 +571,7 @@ int do_random_walk_until_exits_mesh2(const vec3 velocity, const float sss_consta
 	final_dir = collision_dir;
 
 
-	base_opacity = 1 - clamp(base_opacity, 0, 1);
+	base_opacity = pow(1 - clamp(base_opacity, 0, 1), 10.0);
 
 
 //	base_colour = mix(base_colour, 0, base_opacity);
