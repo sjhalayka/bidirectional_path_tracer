@@ -78,7 +78,8 @@ layout(binding = 2, set = 0) uniform UBO
 
 
 
-layout(binding = 5, set = 0) buffer Rays { ray r[]; } ssbo_rays;
+// this doesn't work :(
+layout(std140, binding = 5, set = 0) buffer Rays { ray r[]; } ssbo_rays;
 
 
 
@@ -584,7 +585,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 	// or when the rays miss everything,
 	// or when the level is too deep
 
-	ray ssbo_rays[buffer_size];
+	ray rays[buffer_size];
 	int current_buffer_index = 0;
 
 
@@ -597,28 +598,28 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 	for(int i = 0; i < buffer_size; i++)
 	{
 		// Initialize buffer
-		ssbo_rays[i].in_use = false;
-		ssbo_rays[i].child_reflect_id = -1;
-		ssbo_rays[i].child_refract_id = -1;
-		ssbo_rays[i].child_subsurface_id = -1;
-		ssbo_rays[i].parent_id = -1;
-		ssbo_rays[i].external_reflection_ray = false;
-		ssbo_rays[i].external_refraction_ray = false;
-		ssbo_rays[i].internal_subsurface_ray = false;
-		ssbo_rays[i].normal = vec3(0, 0, 0);
-		ssbo_rays[i].depth = 0;
-		ssbo_rays[i].tint_constant = 0;
-		ssbo_rays[i].tint_colour = vec3(0, 0, 0);
-		ssbo_rays[i].sss_base_opacity = 0;
-		ssbo_rays[i].sss_base_colour = 0;
+		rays[i].in_use = false;
+		rays[i].child_reflect_id = -1;
+		rays[i].child_refract_id = -1;
+		rays[i].child_subsurface_id = -1;
+		rays[i].parent_id = -1;
+		rays[i].external_reflection_ray = false;
+		rays[i].external_refraction_ray = false;
+		rays[i].internal_subsurface_ray = false;
+		rays[i].normal = vec3(0, 0, 0);
+		rays[i].depth = 0;
+		rays[i].tint_constant = 0;
+		rays[i].tint_colour = vec3(0, 0, 0);
+		rays[i].sss_base_opacity = 0;
+		rays[i].sss_base_colour = 0;
 	}
 
 
-	ssbo_rays[0].direction = direction;
-	ssbo_rays[0].origin = origin;
-	ssbo_rays[0].in_use = true;
-	ssbo_rays[0].level = 0;
-	ssbo_rays[0].external_reflection_ray = true;
+	rays[0].direction = direction;
+	rays[0].origin = origin;
+	rays[0].in_use = true;
+	rays[0].level = 0;
+	rays[0].external_reflection_ray = true;
 	current_buffer_index++;
 
 
@@ -629,43 +630,43 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 		for(int i = 0; i < buffer_size; i++)
 		{
-			if(ssbo_rays[i].in_use)
+			if(rays[i].in_use)
 			{
 				used_count++;
 
 				if(ubo.screenshot_mode)
-					ssbo_rays[i].base_color = get_radiance_backward(250, 5, ssbo_rays[i].origin.xyz, ssbo_rays[i].direction.xyz, hue, eta);
+					rays[i].base_color = get_radiance_backward(250, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 				else
-					ssbo_rays[i].base_color = get_radiance_backward(250, 5, ssbo_rays[i].origin.xyz, ssbo_rays[i].direction.xyz, hue, eta);
+					rays[i].base_color = get_radiance_backward(250, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 
-				traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, ssbo_rays[i].origin.xyz, tmin, ssbo_rays[i].direction.xyz, tmax, 0);
+				traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, rays[i].origin.xyz, tmin, rays[i].direction.xyz, tmax, 0);
 								
 				// this particular ray missed everything, or got too deep
-				if(rayPayload.dist == -1.0 || ssbo_rays[i].level >= MAX_RECURSION)
+				if(rayPayload.dist == -1.0 || rays[i].level >= MAX_RECURSION)
 				{
-					ssbo_rays[i].in_use = false;
+					rays[i].in_use = false;
 					continue;
 				}
 
-				vec4 hitPos = ssbo_rays[i].origin + ssbo_rays[i].direction * rayPayload.dist;
+				vec4 hitPos = rays[i].origin + rays[i].direction * rayPayload.dist;
 
-				ssbo_rays[i].depth = distance(hitPos, ssbo_rays[i].origin);
-				ssbo_rays[i].tint_constant = rayPayload.tint;
-				ssbo_rays[i].tint_colour = rayPayload.tint_colour;
-				ssbo_rays[i].normal = rayPayload.normal;				
-				ssbo_rays[i].reflection_constant = rayPayload.reflector;
-				ssbo_rays[i].refraction_constant = rayPayload.opacity;
-				ssbo_rays[i].sss_constant = rayPayload.subsurface;
-				ssbo_rays[i].sss_density = rayPayload.density;
+				rays[i].depth = distance(hitPos, rays[i].origin);
+				rays[i].tint_constant = rayPayload.tint;
+				rays[i].tint_colour = rayPayload.tint_colour;
+				rays[i].normal = rayPayload.normal;				
+				rays[i].reflection_constant = rayPayload.reflector;
+				rays[i].refraction_constant = rayPayload.opacity;
+				rays[i].sss_constant = rayPayload.subsurface;
+				rays[i].sss_density = rayPayload.density;
 
 			
 				// Do some fog in an AABB
 				float dist_color = 0.0;
 				float dist_opacity = 0.0;
-				//get_fog(dist_color, dist_opacity, ssbo_rays[i].origin.xyz, ssbo_rays[i].direction.xyz, hitPos.xyz, ssbo_rays[i].base_color, hue, eta);
+				//get_fog(dist_color, dist_opacity, rays[i].origin.xyz, rays[i].direction.xyz, hitPos.xyz, rays[i].base_color, hue, eta);
 				dist_color = clamp(dist_color, 0.0, 1.0);
 				dist_opacity = clamp(dist_opacity, 0.0, 1.0);
-				ssbo_rays[i].base_color = mix(ssbo_rays[i].base_color, dist_color, dist_opacity);
+				rays[i].base_color = mix(rays[i].base_color, dist_color, dist_opacity);
 
 				
 				const float velocity_length = 0.01;
@@ -673,21 +674,21 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 
 				// entering mesh
-				if(dot(ssbo_rays[i].direction.xyz, rayPayload.normal) <= 0.0)
+				if(dot(rays[i].direction.xyz, rayPayload.normal) <= 0.0)
 				{
 					//generate new ray segments	
 
-					if(current_buffer_index < buffer_size && ssbo_rays[i].reflection_constant != 0.0)
+					if(current_buffer_index < buffer_size && rays[i].reflection_constant != 0.0)
 					{
-						ssbo_rays[i].child_reflect_id = current_buffer_index;
-						ssbo_rays[current_buffer_index].origin.xyz = hitPos.xyz + rayPayload.normal * 0.01f;
-						ssbo_rays[current_buffer_index].direction.xyz = reflect(ssbo_rays[i].direction.xyz, rayPayload.normal);
-						ssbo_rays[current_buffer_index].in_use = true;
-						ssbo_rays[current_buffer_index].level = ssbo_rays[i].level + 1;
-						ssbo_rays[current_buffer_index].external_reflection_ray = true;
-						ssbo_rays[current_buffer_index].external_refraction_ray = false;
-						ssbo_rays[current_buffer_index].internal_subsurface_ray = false;
-						ssbo_rays[current_buffer_index].parent_id = i;
+						rays[i].child_reflect_id = current_buffer_index;
+						rays[current_buffer_index].origin.xyz = hitPos.xyz + rayPayload.normal * 0.01f;
+						rays[current_buffer_index].direction.xyz = reflect(rays[i].direction.xyz, rayPayload.normal);
+						rays[current_buffer_index].in_use = true;
+						rays[current_buffer_index].level = rays[i].level + 1;
+						rays[current_buffer_index].external_reflection_ray = true;
+						rays[current_buffer_index].external_refraction_ray = false;
+						rays[current_buffer_index].internal_subsurface_ray = false;
+						rays[current_buffer_index].parent_id = i;
 
 
 												
@@ -696,19 +697,19 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						vec3 new_dir = vec3(0, 0, 0);
 	
 						int step_count = do_random_walk_until_exits_mesh2(
-										vec3(0,0,0),//normalize(ssbo_rays[current_buffer_index].direction.xyz)*velocity_length, 
-										ssbo_rays[i].sss_constant, 
+										vec3(0,0,0),//normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
+										rays[i].sss_constant, 
 										max_num_steps, 
-										hitPos.xyz - rayPayload.normal * 0.01, //ssbo_rays[current_buffer_index].origin.xyz, 
+										hitPos.xyz - rayPayload.normal * 0.01, //rays[current_buffer_index].origin.xyz, 
 										new_pos, 
 										new_dir, 
-										ssbo_rays[current_buffer_index].sss_base_colour, 
-										ssbo_rays[current_buffer_index].sss_base_opacity, 
+										rays[current_buffer_index].sss_base_colour, 
+										rays[current_buffer_index].sss_base_opacity, 
 										hue);
 
 
-						//ssbo_rays[current_buffer_index].origin.xyz = new_pos;
-						//ssbo_rays[current_buffer_index].direction.xyz = new_dir;
+						//rays[current_buffer_index].origin.xyz = new_pos;
+						//rays[current_buffer_index].direction.xyz = new_dir;
 						
 
 
@@ -719,17 +720,17 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 					}
 					
 
-					if(current_buffer_index < buffer_size && ssbo_rays[i].refraction_constant != 1.0)
+					if(current_buffer_index < buffer_size && rays[i].refraction_constant != 1.0)
 					{
-						ssbo_rays[i].child_refract_id = current_buffer_index;
-						ssbo_rays[current_buffer_index].origin.xyz = hitPos.xyz - rayPayload.normal * 0.01f;
-						ssbo_rays[current_buffer_index].direction.xyz = refract(ssbo_rays[i].direction.xyz, rayPayload.normal, eta);
-						ssbo_rays[current_buffer_index].in_use = true;
-						ssbo_rays[current_buffer_index].level = ssbo_rays[i].level + 1;
-						ssbo_rays[current_buffer_index].external_reflection_ray = false;
-						ssbo_rays[current_buffer_index].external_refraction_ray = false;
-						ssbo_rays[current_buffer_index].internal_subsurface_ray = false;
-						ssbo_rays[current_buffer_index].parent_id = i;
+						rays[i].child_refract_id = current_buffer_index;
+						rays[current_buffer_index].origin.xyz = hitPos.xyz - rayPayload.normal * 0.01f;
+						rays[current_buffer_index].direction.xyz = refract(rays[i].direction.xyz, rayPayload.normal, eta);
+						rays[current_buffer_index].in_use = true;
+						rays[current_buffer_index].level = rays[i].level + 1;
+						rays[current_buffer_index].external_reflection_ray = false;
+						rays[current_buffer_index].external_refraction_ray = false;
+						rays[current_buffer_index].internal_subsurface_ray = false;
+						rays[current_buffer_index].parent_id = i;
 
 
 
@@ -739,14 +740,14 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						vec3 new_dir = vec3(0, 0, 0);
 	
 						int step_count = do_random_walk_until_exits_mesh2(
-										normalize(ssbo_rays[current_buffer_index].direction.xyz)*velocity_length, 
-										ssbo_rays[i].sss_constant, 
+										normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
+										rays[i].sss_constant, 
 										max_num_steps, 
-										ssbo_rays[current_buffer_index].origin.xyz,
+										rays[current_buffer_index].origin.xyz,
 										new_pos, 
 										new_dir, 
-										ssbo_rays[current_buffer_index].sss_base_colour, 
-										ssbo_rays[current_buffer_index].sss_base_opacity, 
+										rays[current_buffer_index].sss_base_colour, 
+										rays[current_buffer_index].sss_base_opacity, 
 										hue);
 										
 
@@ -760,20 +761,20 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				{
 					if(current_buffer_index < buffer_size)
 					{
-						ssbo_rays[i].child_refract_id = current_buffer_index;
+						rays[i].child_refract_id = current_buffer_index;
 
-						vec3 temp_dir = refract(ssbo_rays[i].direction.xyz, -rayPayload.normal, 1.0/eta);
+						vec3 temp_dir = refract(rays[i].direction.xyz, -rayPayload.normal, 1.0/eta);
 
 						if(temp_dir != vec3(0.0))
 						{
-							ssbo_rays[current_buffer_index].origin.xyz = hitPos.xyz + rayPayload.normal * 0.01;
-							ssbo_rays[current_buffer_index].direction.xyz = temp_dir;
-							ssbo_rays[current_buffer_index].external_reflection_ray = false;
-							ssbo_rays[current_buffer_index].external_refraction_ray = true;
-							ssbo_rays[current_buffer_index].internal_subsurface_ray = false;
-							ssbo_rays[current_buffer_index].in_use = true;
-							ssbo_rays[current_buffer_index].level = ssbo_rays[i].level + 1;
-							ssbo_rays[current_buffer_index].parent_id = i;
+							rays[current_buffer_index].origin.xyz = hitPos.xyz + rayPayload.normal * 0.01;
+							rays[current_buffer_index].direction.xyz = temp_dir;
+							rays[current_buffer_index].external_reflection_ray = false;
+							rays[current_buffer_index].external_refraction_ray = true;
+							rays[current_buffer_index].internal_subsurface_ray = false;
+							rays[current_buffer_index].in_use = true;
+							rays[current_buffer_index].level = rays[i].level + 1;
+							rays[current_buffer_index].parent_id = i;
 
 
 
@@ -784,18 +785,18 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 	
 	
 							int step_count = do_random_walk_until_exits_mesh2(
-											normalize(ssbo_rays[current_buffer_index].direction.xyz)*velocity_length, 
-											ssbo_rays[i].sss_constant, 
+											normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
+											rays[i].sss_constant, 
 											max_num_steps, 
-											ssbo_rays[current_buffer_index].origin.xyz,
+											rays[current_buffer_index].origin.xyz,
 											new_pos, 
 											new_dir, 
-											ssbo_rays[current_buffer_index].sss_base_colour, 
-											ssbo_rays[current_buffer_index].sss_base_opacity, 
+											rays[current_buffer_index].sss_base_colour, 
+											rays[current_buffer_index].sss_base_opacity, 
 											hue);
 
-					//		ssbo_rays[current_buffer_index].origin.xyz = new_pos;
-					//		ssbo_rays[current_buffer_index].direction.xyz = new_dir;
+					//		rays[current_buffer_index].origin.xyz = new_pos;
+					//		rays[current_buffer_index].direction.xyz = new_dir;
 					
 
 
@@ -809,13 +810,13 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						{
 							// Total internal reflection
 							
-							ssbo_rays[current_buffer_index].origin.xyz = hitPos.xyz - rayPayload.normal * 0.01f;
-							ssbo_rays[current_buffer_index].direction.xyz = reflect(ssbo_rays[i].direction.xyz, -rayPayload.normal);
-							ssbo_rays[current_buffer_index].in_use = true;
-							ssbo_rays[current_buffer_index].level = ssbo_rays[i].level + 1;
-							ssbo_rays[current_buffer_index].external_reflection_ray = false;
-							ssbo_rays[current_buffer_index].external_refraction_ray = false;
-							ssbo_rays[current_buffer_index].parent_id = i;
+							rays[current_buffer_index].origin.xyz = hitPos.xyz - rayPayload.normal * 0.01f;
+							rays[current_buffer_index].direction.xyz = reflect(rays[i].direction.xyz, -rayPayload.normal);
+							rays[current_buffer_index].in_use = true;
+							rays[current_buffer_index].level = rays[i].level + 1;
+							rays[current_buffer_index].external_reflection_ray = false;
+							rays[current_buffer_index].external_refraction_ray = false;
+							rays[current_buffer_index].parent_id = i;
 
 
 														// do random walk here to get base opacity
@@ -824,18 +825,18 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 	
 	
 							int step_count = do_random_walk_until_exits_mesh2(
-											normalize(ssbo_rays[current_buffer_index].direction.xyz)*velocity_length, 
-											ssbo_rays[i].sss_constant, 
+											normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
+											rays[i].sss_constant, 
 											max_num_steps, 
-											ssbo_rays[current_buffer_index].origin.xyz,
+											rays[current_buffer_index].origin.xyz,
 											new_pos, 
 											new_dir, 
-											ssbo_rays[current_buffer_index].sss_base_colour, 
-											ssbo_rays[current_buffer_index].sss_base_opacity, 
+											rays[current_buffer_index].sss_base_colour, 
+											rays[current_buffer_index].sss_base_opacity, 
 											hue);
 
-					//		ssbo_rays[current_buffer_index].origin.xyz = new_pos;
-					//		ssbo_rays[current_buffer_index].direction.xyz = new_dir;
+					//		rays[current_buffer_index].origin.xyz = new_pos;
+					//		rays[current_buffer_index].direction.xyz = new_dir;
 					
 
 
@@ -846,7 +847,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				}
 
 				// The processing of this ray segment is complete
-				ssbo_rays[i].in_use = false;
+				rays[i].in_use = false;
 			}
 		}
 
@@ -865,71 +866,71 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 		bool neither = false;
 		bool both = false;
 
-		if(ssbo_rays[i].child_refract_id != -1 && ssbo_rays[i].child_reflect_id == -1)
+		if(rays[i].child_refract_id != -1 && rays[i].child_reflect_id == -1)
 			pure_refraction = true;
 
-		if(ssbo_rays[i].child_refract_id == -1 && ssbo_rays[i].child_reflect_id != -1)
+		if(rays[i].child_refract_id == -1 && rays[i].child_reflect_id != -1)
 			pure_reflection = true;
 
-		if(ssbo_rays[i].child_refract_id == -1 && ssbo_rays[i].child_reflect_id == -1)
+		if(rays[i].child_refract_id == -1 && rays[i].child_reflect_id == -1)
 			neither = true;
 
-		if(ssbo_rays[i].child_refract_id != -1 && ssbo_rays[i].child_reflect_id != -1)
+		if(rays[i].child_refract_id != -1 && rays[i].child_reflect_id != -1)
 			both = true;
 
 		float accum = 0.0;
 
 		if(neither)
 		{
-			accum = ssbo_rays[i].base_color;
+			accum = rays[i].base_color;
 		}
 		else if(both)
 		{
 			// Fake the Fresnel refraction-reflection
-			const float ratio = 1.0 - dot(-normalize(ssbo_rays[i].direction.xyz), ssbo_rays[i].normal);
+			const float ratio = 1.0 - dot(-normalize(rays[i].direction.xyz), rays[i].normal);
 
-			float reflect_accum = mix(ssbo_rays[i].base_color, ssbo_rays[ssbo_rays[i].child_reflect_id].accumulated_color, ssbo_rays[i].reflection_constant);
-			float refract_accum = mix(ssbo_rays[i].base_color, ssbo_rays[ssbo_rays[i].child_refract_id].accumulated_color, 1 - ssbo_rays[i].refraction_constant);
+			float reflect_accum = mix(rays[i].base_color, rays[rays[i].child_reflect_id].accumulated_color, rays[i].reflection_constant);
+			float refract_accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1 - rays[i].refraction_constant);
 		
-			//refract_accum = mix(refract_accum, ssbo_rays[ssbo_rays[i].child_refract_id].sss_base_colour, ssbo_rays[ssbo_rays[i].child_refract_id].sss_base_opacity);
-			//reflect_accum = mix(reflect_accum, ssbo_rays[ssbo_rays[i].child_reflect_id].sss_base_colour, ssbo_rays[ssbo_rays[i].child_reflect_id].sss_base_opacity);
+			//refract_accum = mix(refract_accum, rays[rays[i].child_refract_id].sss_base_colour, rays[rays[i].child_refract_id].sss_base_opacity);
+			//reflect_accum = mix(reflect_accum, rays[rays[i].child_reflect_id].sss_base_colour, rays[rays[i].child_reflect_id].sss_base_opacity);
 
 
-			//refract_accum = ssbo_rays[ssbo_rays[i].child_refract_id].sss_base_opacity;//*ssbo_rays[ssbo_rays[i].child_refract_id].sss_base_opacity;
-			//reflect_accum = ssbo_rays[ssbo_rays[i].child_reflect_id].sss_base_opacity;//*ssbo_rays[ssbo_rays[i].child_reflect_id].sss_base_opacity;
+			//refract_accum = rays[rays[i].child_refract_id].sss_base_opacity;//*rays[rays[i].child_refract_id].sss_base_opacity;
+			//reflect_accum = rays[rays[i].child_reflect_id].sss_base_opacity;//*rays[rays[i].child_reflect_id].sss_base_opacity;
 
 
 			accum = mix(refract_accum, reflect_accum, ratio);
 		}
 		else if(pure_refraction)
 		{
-			accum = mix(ssbo_rays[i].base_color, ssbo_rays[ssbo_rays[i].child_refract_id].accumulated_color, 1.0 - ssbo_rays[i].refraction_constant);	
+			accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1.0 - rays[i].refraction_constant);	
 		}
 		else if(pure_reflection)
 		{
-			accum = mix(ssbo_rays[i].base_color, ssbo_rays[ssbo_rays[i].child_reflect_id].accumulated_color, ssbo_rays[i].reflection_constant);
+			accum = mix(rays[i].base_color, rays[rays[i].child_reflect_id].accumulated_color, rays[i].reflection_constant);
 		}
 
-		//if(ssbo_rays[i].child_subsurface_id != -1)
-		//accum = mix(accum, ssbo_rays[ssbo_rays[i].child_subsurface_id].sss_base_colour, ssbo_rays[ssbo_rays[i].child_subsurface_id].sss_base_opacity);
+		//if(rays[i].child_subsurface_id != -1)
+		//accum = mix(accum, rays[rays[i].child_subsurface_id].sss_base_colour, rays[rays[i].child_subsurface_id].sss_base_opacity);
 
 
 		// Do tinting
 		const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
-		const float t = ssbo_rays[i].tint_colour.r*mask.r + ssbo_rays[i].tint_colour.g*mask.g + ssbo_rays[i].tint_colour.b*mask.b;
+		const float t = rays[i].tint_colour.r*mask.r + rays[i].tint_colour.g*mask.g + rays[i].tint_colour.b*mask.b;
 	
 		float x = accum;
-		accum = mix(x, t, ssbo_rays[i].tint_constant);
+		accum = mix(x, t, rays[i].tint_constant);
 		accum = min(x, accum);
 
-		ssbo_rays[i].accumulated_color = accum;
+		rays[i].accumulated_color = accum;
 	}
 
 
 
 
 	// Show level depth as grayscale colour
-	//float s = 1.0 - float(ssbo_rays[current_buffer_index - 1].level) / float(MAX_RECURSION);
+	//float s = 1.0 - float(rays[current_buffer_index - 1].level) / float(MAX_RECURSION);
 	// return s;
 
 
@@ -937,7 +938,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 	//float s = 1.0 - float(current_buffer_index - 1) / float(buffer_size);
 	//return s;
 
-	return ssbo_rays[0].accumulated_color;
+	return rays[0].accumulated_color;
 }
 
 
@@ -952,7 +953,7 @@ vec3 plane_ray_intersection(vec3 planeP, vec3 planeN, vec3 rayP, vec3 rayD)
 
 void main() 
 {
-//	ssbo_rays[0].direction = vec4(0,0,0,0);
+//	rays[0].direction = vec4(0,0,0,0);
 
 
 
