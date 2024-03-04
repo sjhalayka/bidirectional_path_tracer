@@ -82,11 +82,6 @@ public:
 	VkDescriptorSet materialSet;
 
 
-	struct StagingBuffer {
-		VkBuffer buffer;
-		VkDeviceMemory memory;
-	} ray_test_staging;
-
 
 	struct ray_test
 	{
@@ -142,7 +137,7 @@ public:
 			{ VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1 },
 			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 },
 			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2 }, // 3
 			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 },
 		};
 		VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = vks::initializers::descriptorPoolCreateInfo(poolSizes, 2);
@@ -171,41 +166,24 @@ public:
 		VkDescriptorBufferInfo vertexBufferDescriptor{ scene.vertices.buffer, 0, VK_WHOLE_SIZE };
 		VkDescriptorBufferInfo indexBufferDescriptor{ scene.indices.buffer, 0, VK_WHOLE_SIZE };
 
-		size_t ray_testBufferSize = ray_buffer_size * sizeof(ray_test);
+		//size_t ray_testBufferSize = ray_buffer_size * sizeof(ray_test);
 
-		VK_CHECK_RESULT(vulkanDevice->createBuffer(
-			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			ray_testBufferSize,
-			&ray_test_staging.buffer,
-			&ray_test_staging.memory,
-			&r[0]));
-
-		VkDescriptorBufferInfo ray_testBufferDescriptor{ ray_test_staging.buffer, 0, VK_WHOLE_SIZE };
+		//struct StagingBuffer {
+		//	VkBuffer buffer;
+		//	VkDeviceMemory memory;
+		//} ray_test_staging;
 
 
-		//VkBufferMemoryBarrier barrier = {};
-		//barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		//barrier.srcAccessMask = VK_ACCESS_NONE;
-		//barrier.dstAccessMask = VK_ACCESS_NONE;
-		//barrier.buffer = ray_test_staging.buffer;
-		//barrier.size = ray_testBufferSize;
 
+		//VK_CHECK_RESULT(vulkanDevice->createBuffer(
+		//	VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		//	VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		//	ray_testBufferSize,
+		//	&ray_test_staging.buffer,
+		//	&ray_test_staging.memory,
+		//	&r[0]));
 
-		//VkCommandBuffer cmdbuf = vulkanDevice->createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
-
-	
-		//vkCmdPipelineBarrier(
-		//	cmdbuf,
-		//	VK_PIPELINE_STAGE_NONE,
-		//	VK_PIPELINE_STAGE_NONE,
-		//	0,
-		//	0, nullptr,
-		//	1, &barrier,
-		//	0, nullptr
-		//);
-
-		//vulkanDevice->flushCommandBuffer(cmdbuf, queue);
+		//VkDescriptorBufferInfo ray_testBufferDescriptor{ ray_test_staging.buffer, 0, VK_WHOLE_SIZE };
 
 
 		std::vector<VkWriteDescriptorSet> writeDescriptorSets = {
@@ -220,7 +198,7 @@ public:
 			// Binding 4: Scene index buffer
 			vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4, &indexBufferDescriptor),
 			// Binding 5: Scene ray buffer
-			vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 5, &ray_testBufferDescriptor),
+			//vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 5, &ray_testBufferDescriptor),
 
 			// Binding 0: Base color texture
 			vks::initializers::writeDescriptorSet(materialSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &scene.materials[0].baseColorTexture->descriptor),
@@ -247,7 +225,7 @@ public:
 			// Binding 4: Index buffer
 			vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 4),
 			// Binding 5: raytest buffer
-			vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 5),
+			//vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 5),
 
 		};
 
@@ -352,7 +330,7 @@ public:
 			{ VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1 },
 			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 },
 			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 }
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2 } // 3
 		};
 		VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = vks::initializers::descriptorPoolCreateInfo(poolSizes, 1);
 		VK_CHECK_RESULT(vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, nullptr, &screenshotDescriptorPool));
@@ -379,17 +357,23 @@ public:
 	
 
 
-		size_t ray_testBufferSize = ray_buffer_size * sizeof(ray_test);
+		//size_t ray_testBufferSize = ray_buffer_size * sizeof(ray_test);
 
-		VK_CHECK_RESULT(vulkanDevice->createBuffer(
-			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			ray_testBufferSize,
-			&ray_test_staging.buffer,
-			&ray_test_staging.memory,
-			&r[0]));
+		//struct StagingBuffer {
+		//	VkBuffer buffer;
+		//	VkDeviceMemory memory;
+		//} ray_test_staging;
 
-		VkDescriptorBufferInfo ray_testBufferDescriptor{ ray_test_staging.buffer, 0, VK_WHOLE_SIZE };
+
+		//VK_CHECK_RESULT(vulkanDevice->createBuffer(
+		//	VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		//	VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		//	ray_testBufferSize,
+		//	&ray_test_staging.buffer,
+		//	&ray_test_staging.memory,
+		//	&r[0]));
+
+		//VkDescriptorBufferInfo ray_testBufferDescriptor{ ray_test_staging.buffer, 0, VK_WHOLE_SIZE };
 
 
 		std::vector<VkWriteDescriptorSet> writeDescriptorSets = {
@@ -404,7 +388,7 @@ public:
 			// Binding 4: Scene index buffer
 			vks::initializers::writeDescriptorSet(screenshotDescriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4, &indexBufferDescriptor),
 			// Binding 5: Scene raytest
-			vks::initializers::writeDescriptorSet(screenshotDescriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 5, &ray_testBufferDescriptor),
+			//vks::initializers::writeDescriptorSet(screenshotDescriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 5, &ray_testBufferDescriptor),
 
 		};
 		vkUpdateDescriptorSets(device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, VK_NULL_HANDLE);
@@ -422,7 +406,7 @@ public:
 
 	void screenshot(size_t num_cams_wide, const char* filename)
 	{
-		bool do_denoising = true;
+		bool do_denoising = false;
 
 		if (num_cams_wide == 0)
 			return;
@@ -1244,6 +1228,8 @@ public:
 	{
 		m.lock();
 		
+		deleteStorageImage();
+		
 		// Recreate image
 		createStorageImage(swapChain.colorFormat, { width, height, 1 });
 		// Update descriptor
@@ -1251,6 +1237,7 @@ public:
 		VkWriteDescriptorSet resultImageWrite = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, &storageImageDescriptor);
 		vkUpdateDescriptorSets(device, 1, &resultImageWrite, 0, VK_NULL_HANDLE);
 		resized = false;
+		
 
 		m.unlock();
 	}

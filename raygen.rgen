@@ -637,7 +637,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				if(ubo.screenshot_mode)
 					rays[i].base_color = get_radiance_backward(250, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 				else
-					rays[i].base_color = get_radiance_backward(250, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+					rays[i].base_color = get_radiance_backward(25, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 
 				traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, rays[i].origin.xyz, tmin, rays[i].direction.xyz, tmax, 0);
 								
@@ -691,7 +691,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						rays[current_buffer_index].parent_id = i;
 
 
-												
+										/*		
 						// do random walk here to get base opacity
 						vec3 new_pos = vec3(0, 0, 0);
 						vec3 new_dir = vec3(0, 0, 0);
@@ -710,7 +710,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 						//rays[current_buffer_index].origin.xyz = new_pos;
 						//rays[current_buffer_index].direction.xyz = new_dir;
-						
+						*/
 
 
 
@@ -734,7 +734,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 
 
-												
+									/*			
 						// do random walk here to get base opacity
 						vec3 new_pos = vec3(0, 0, 0);
 						vec3 new_dir = vec3(0, 0, 0);
@@ -750,7 +750,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 										rays[current_buffer_index].sss_base_opacity, 
 										hue);
 										
-
+*/
 
 
 						current_buffer_index++;
@@ -777,8 +777,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 							rays[current_buffer_index].parent_id = i;
 
 
-
-
+							/*
 														// do random walk here to get base opacity
 							vec3 new_pos = vec3(0, 0, 0);
 							vec3 new_dir = vec3(0, 0, 0);
@@ -799,7 +798,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 					//		rays[current_buffer_index].direction.xyz = new_dir;
 					
 
-
+					*/
 
 
 
@@ -818,7 +817,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 							rays[current_buffer_index].external_refraction_ray = false;
 							rays[current_buffer_index].parent_id = i;
 
-
+							/*
 														// do random walk here to get base opacity
 							vec3 new_pos = vec3(0, 0, 0);
 							vec3 new_dir = vec3(0, 0, 0);
@@ -838,7 +837,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 					//		rays[current_buffer_index].origin.xyz = new_pos;
 					//		rays[current_buffer_index].direction.xyz = new_dir;
 					
-
+					*/
 
 
 							current_buffer_index++;
