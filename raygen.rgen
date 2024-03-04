@@ -79,7 +79,7 @@ layout(binding = 2, set = 0) uniform UBO
 
 
 // this doesn't work :(
-layout(std140, binding = 5, set = 0) buffer Rays { ray r[]; } ssbo_rays;
+//layout(binding = 5, set = 0) buffer Rays { ray r[]; } ssbo_rays;
 
 
 
@@ -557,13 +557,17 @@ int do_random_walk_until_exits_mesh2(const vec3 velocity, const float sss_consta
 		float colour = collision_colour.r*mask.r + collision_colour.g*mask.g + collision_colour.b*mask.b;
 
 		const float trans = 1.0 - clamp(base_opacity, 0.0, 1.0);
-		base_colour += colour*0.1;//*trans;
-		base_opacity += 0.1;
+		base_colour += clamp(base_colour, 0, 1)*trans;
+		base_opacity += 0.1*trans;
 
 		i++;
 	}
 
-	base_opacity = clamp(base_opacity, 0, 1);
+	final_pos = collision_pos;
+	final_dir = collision_dir;
+
+
+	//base_opacity = clamp(base_opacity, 0, 1);
 
 
 //	base_colour = mix(base_colour, 0, base_opacity);
@@ -691,13 +695,13 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						rays[current_buffer_index].parent_id = i;
 
 
-										/*		
+										
 						// do random walk here to get base opacity
 						vec3 new_pos = vec3(0, 0, 0);
 						vec3 new_dir = vec3(0, 0, 0);
 	
 						int step_count = do_random_walk_until_exits_mesh2(
-										vec3(0,0,0),//normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
+										normalize(rays[current_buffer_index].direction.xyz)*velocity_length, 
 										rays[i].sss_constant, 
 										max_num_steps, 
 										hitPos.xyz - rayPayload.normal * 0.01, //rays[current_buffer_index].origin.xyz, 
@@ -710,8 +714,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 						//rays[current_buffer_index].origin.xyz = new_pos;
 						//rays[current_buffer_index].direction.xyz = new_dir;
-						*/
 
+						//rays[current_buffer_index].sss_base_opacity = 1;
 
 
 
@@ -895,11 +899,11 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 			//reflect_accum = mix(reflect_accum, rays[rays[i].child_reflect_id].sss_base_colour, rays[rays[i].child_reflect_id].sss_base_opacity);
 
 
-			//refract_accum = rays[rays[i].child_refract_id].sss_base_opacity;//*rays[rays[i].child_refract_id].sss_base_opacity;
-			//reflect_accum = rays[rays[i].child_reflect_id].sss_base_opacity;//*rays[rays[i].child_reflect_id].sss_base_opacity;
+			refract_accum = rays[rays[i].child_refract_id].sss_base_opacity;//*rays[rays[i].child_refract_id].sss_base_opacity;
+			reflect_accum = rays[rays[i].child_reflect_id].sss_base_opacity;//*rays[rays[i].child_reflect_id].sss_base_opacity;
 
 
-			accum = mix(refract_accum, reflect_accum, ratio);
+			accum = mix(refract_accum, reflect_accum, 1);
 		}
 		else if(pure_refraction)
 		{
