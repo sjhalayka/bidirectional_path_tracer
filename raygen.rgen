@@ -550,7 +550,7 @@ int do_random_walk_until_exits_mesh2(const vec3 velocity, const float velocity_c
 
 	while(is_inside_mesh(final_pos, collision_pos, collision_dir, collision_colour) && i <= max_walk_length)
 	{
-		final_pos += velocity*velocity_constant;
+		final_pos += (1 - sss_density)*velocity*velocity_constant;
 		final_pos += sss_constant*RandomUnitVector(prng_state)*velocity_constant;
 
 //		const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
@@ -571,7 +571,7 @@ int do_random_walk_until_exits_mesh2(const vec3 velocity, const float velocity_c
 
 	rayPayload = r;
 
-	base_colour = mix(initial_colour + last_colour, initial_colour, float(i)/float(max_walk_length));
+	base_colour = mix(last_colour, initial_colour, pow(float(i)/float(max_walk_length), 1.0/2.0));
 	base_opacity = sss_constant*pow(clamp(base_opacity, 0, 1), 1.0);
 
 
