@@ -115,7 +115,7 @@ void main()
 		rayPayload.opacity = 0.01;
 		rayPayload.reflector = 0.99;
 
-	//	rayPayload.color = vec3(1,1,1);
+		rayPayload.color = vec3(0.5, 0.5, 0.5);
 //
 	//	rayPayload.tint = 1.0;
 	//	rayPayload.tint_colour = vec3(1,0,0);
