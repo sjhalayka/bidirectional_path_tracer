@@ -539,7 +539,7 @@ int do_random_walk_until_exits_mesh2(const vec3 velocity, const float velocity_c
 {
 	final_pos = pos;
 	
-	base_opacity = 0.0;
+	base_opacity = 1.0;
 	base_colour = 0.0;
 
 	int i = 1;
@@ -551,23 +551,22 @@ int do_random_walk_until_exits_mesh2(const vec3 velocity, const float velocity_c
 	while(is_inside_mesh(final_pos, collision_pos, collision_dir, collision_colour) && i <= max_walk_length)
 	{	
 		final_pos += (1.0 - sss_density)*velocity*velocity_constant;
-		final_pos += sss_constant*RandomUnitVector(prng_state)*velocity_constant;
+		final_pos += (1.0 - sss_density)*sss_constant*RandomUnitVector(prng_state)*velocity_constant;
 
 		const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
 		float colour = collision_colour.r*mask.r + collision_colour.g*mask.g + collision_colour.b*mask.b;
 
 		const float trans = 1.0 - clamp(base_opacity, 0.0, 1.0);
 		base_colour += colour;
-		base_opacity += 0.1;//*trans;
+		base_opacity -= 0.2;//*trans;
 
 		i++;
 	}
 
-	final_pos = collision_pos;
-	final_dir = collision_dir;
+
+	base_opacity = pow(clamp(base_opacity, 0, 1), 1.0);
 
 
-	//base_opacity = pow(1 - clamp(base_opacity, 0, 1), 1.0);
 
 
 //	base_colour = mix(base_colour, 0, base_opacity);
@@ -721,7 +720,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 					if(current_buffer_index < buffer_size && rays[i].refraction_constant != 1.0)
 					{
 						rays[i].child_refract_id = current_buffer_index;
-						rays[current_buffer_index].origin.xyz = hitPos.xyz - rayPayload.normal * 0.01f;
+						rays[current_buffer_index].origin.xyz = hitPos.xyz - rayPayload.normal * 0.01;
 						rays[current_buffer_index].direction.xyz = refract(rays[i].direction.xyz, rayPayload.normal, eta);
 						rays[current_buffer_index].in_use = true;
 						rays[current_buffer_index].level = rays[i].level + 1;
