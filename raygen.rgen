@@ -571,7 +571,7 @@ int do_random_walk_until_exits_mesh2(const vec3 velocity, const float velocity_c
 
 //	base_colour = mix(base_colour, 0, base_opacity);
 
-	base_colour /= i;
+	//base_colour /= i;
 	//base_colour = 1 - clamp(base_colour, 0, 1);
 
 //	base_colour = stepAndOutputRNGFloat(prng_state);
