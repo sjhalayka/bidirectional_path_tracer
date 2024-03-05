@@ -558,7 +558,7 @@ int do_random_walk_until_exits_mesh2(const vec3 velocity, const float velocity_c
 
 		const float trans = 1.0 - clamp(base_opacity, 0.0, 1.0);
 		base_colour += colour;
-		base_opacity -= 0.2;//*trans;
+		base_opacity -= 0.01;//*trans;
 
 		i++;
 	}
@@ -571,7 +571,7 @@ int do_random_walk_until_exits_mesh2(const vec3 velocity, const float velocity_c
 
 //	base_colour = mix(base_colour, 0, base_opacity);
 
-	//base_colour /= i;
+	base_colour /= i;
 	//base_colour = 1 - clamp(base_colour, 0, 1);
 
 //	base_colour = stepAndOutputRNGFloat(prng_state);
@@ -697,7 +697,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						vec3 new_dir = vec3(0, 0, 0);
 	
 						int step_count = do_random_walk_until_exits_mesh2(
-										normalize(rays[current_buffer_index].direction.xyz), 
+										-normalize(rays[current_buffer_index].direction.xyz), 
 										velocity_length, 
 										rays[i].sss_constant,
 										rays[i].sss_density,
@@ -735,7 +735,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 						vec3 new_dir = vec3(0, 0, 0);
 	
 						int step_count = do_random_walk_until_exits_mesh2(
-										normalize(rays[current_buffer_index].direction.xyz),
+										-normalize(rays[current_buffer_index].direction.xyz),
 										velocity_length, 
 										rays[i].sss_constant,
 										rays[i].sss_density,
