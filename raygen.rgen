@@ -301,11 +301,10 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 			break;
 		}
 
+		// Hit a light
 		if(rayPayload.color.r > 1
 		|| rayPayload.color.g > 1
 		|| rayPayload.color.b > 1)
-
-
 		{
 			ret_colour += local_colour;
 			break;
@@ -373,13 +372,13 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 				if(temp_dir != vec3(0.0))
 				{
 					o_transparent = hitPos.xyz + rayPayload.normal * 0.01f;
-					d_transparent = mix(temp_dir, RandomUnitVector(prng_state), rayPayload.subsurface);//	temp_dir;
+					d_transparent = temp_dir;//mix(temp_dir, RandomUnitVector(prng_state), rayPayload.subsurface);//	temp_dir;
 				}
 				else
 				{
 					// Total internal reflection
 					o_transparent = hitPos.xyz - rayPayload.normal * 0.01f;
-					d_transparent =  mix(reflect(d, -rayPayload.normal), RandomUnitVector(prng_state), rayPayload.subsurface);//reflect(d, -rayPayload.normal);
+					d_transparent = reflect(d, -rayPayload.normal);//mix(reflect(d, -rayPayload.normal), RandomUnitVector(prng_state), rayPayload.subsurface);//reflect(d, -rayPayload.normal);
 				}
 			}
 
@@ -511,7 +510,7 @@ bool is_inside_mesh(const vec3 location, inout vec3 collision_pos, inout vec3 co
 	RayPayload r = rayPayload;
 	bool is_outside = false;
 
-	const vec3 direction = vec3(0, 1, 0); // Any unit vector will do
+	const vec3 direction = vec3(0, 1, 0); // Any vector will do
 
 	traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, location, 0.001, direction, 10000.0, 0);
 
@@ -558,7 +557,7 @@ int do_random_walk_until_exits_mesh2(bool do_final_gathering, const vec3 velocit
 //		const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
 //		float colour = collision_colour.r*mask.r + collision_colour.g*mask.g + collision_colour.b*mask.b;
  
-		base_colour += initial_colour;
+//		base_colour += initial_colour;
 		base_opacity += 1.0/float(max_walk_length);
 
 		i++;
@@ -930,12 +929,12 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 		else if(pure_refraction)
 		{
 			accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1.0 - rays[i].refraction_constant);	
-			accum = mix(accum, rays[rays[i].child_refract_id].sss_base_colour, rays[rays[i].child_refract_id].sss_base_opacity);
+			//accum = mix(accum, rays[rays[i].child_refract_id].sss_base_colour, rays[rays[i].child_refract_id].sss_base_opacity);
 		}
 		else if(pure_reflection)
 		{
 			accum = mix(rays[i].base_color, rays[rays[i].child_reflect_id].accumulated_color, rays[i].reflection_constant);
-			accum = mix(accum, rays[rays[i].child_reflect_id].sss_base_colour, rays[rays[i].child_reflect_id].sss_base_opacity);
+			//accum = mix(accum, rays[rays[i].child_reflect_id].sss_base_colour, rays[rays[i].child_reflect_id].sss_base_opacity);
 		}
 
 
