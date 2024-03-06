@@ -113,7 +113,7 @@ void main()
 	if(rayPayload.opacity == 0.0)
 	{
 		rayPayload.opacity = 0.9;
-		rayPayload.reflector = 0.99;
+		rayPayload.reflector = 0.9;
 
 		rayPayload.color = vec3(0.0, 1.0, 0.0);
 
