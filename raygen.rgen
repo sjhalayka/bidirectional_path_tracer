@@ -71,6 +71,7 @@ layout(binding = 2, set = 0) uniform UBO
 	int vertexSize;
 	bool screenshot_mode;
 
+	// These are no longer used
 	uint tri_count;
 	uint light_tri_count;
 
@@ -208,8 +209,8 @@ vec3 cosWeightedRandomHemisphereDirection( const vec3 n, inout uint state )
 	vec3  vv = cross( uu, n );
 	
 	float ra = sqrt(r.y);
-	float rx = ra*cos(6.2831*r.x); 
-	float ry = ra*sin(6.2831*r.x);
+	float rx = ra*cos(TWO_PI*r.x); 
+	float ry = ra*sin(TWO_PI*r.x);
 	float rz = sqrt( 1.0-r.y );
 	vec3  rr = vec3( rx*uu + ry*vv + rz*n );
     
@@ -327,7 +328,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 				total += mask.g;
 				total += mask.b;
 
-				local_colour += (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
+				local_colour += rayPayload.subsurface*(rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
 			}
 
 			if(rayPayload.reflector > 0)
@@ -372,13 +373,13 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 				if(temp_dir != vec3(0.0))
 				{
 					o_transparent = hitPos.xyz + rayPayload.normal * 0.01f;
-					d_transparent = temp_dir;//mix(temp_dir, RandomUnitVector(prng_state), rayPayload.subsurface);//	temp_dir;
+					d_transparent = mix(temp_dir, RandomUnitVector(prng_state), rayPayload.subsurface);//	temp_dir;
 				}
 				else
 				{
 					// Total internal reflection
 					o_transparent = hitPos.xyz - rayPayload.normal * 0.01f;
-					d_transparent = reflect(d, -rayPayload.normal);//mix(reflect(d, -rayPayload.normal), RandomUnitVector(prng_state), rayPayload.subsurface);//reflect(d, -rayPayload.normal);
+					d_transparent = mix(reflect(d, -rayPayload.normal), RandomUnitVector(prng_state), rayPayload.subsurface);//reflect(d, -rayPayload.normal);
 				}
 			}
 
@@ -732,6 +733,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 										hue,
 										initial_colour);
 */
+
 						//rays[current_buffer_index].sss_base_opacity *= rays[current_buffer_index].sss_constant;
 
 						//rays[current_buffer_index].origin.xyz = new_pos;
@@ -772,10 +774,9 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 										rays[current_buffer_index].sss_base_opacity, 
 										hue,
 										initial_colour);
-		*/								
-										
+											
 						//rays[current_buffer_index].sss_base_opacity *= rays[current_buffer_index].sss_constant;
-
+*/
 
 
 						current_buffer_index++;
@@ -921,20 +922,20 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 			float reflect_accum = mix(rays[i].base_color, rays[rays[i].child_reflect_id].accumulated_color, rays[i].reflection_constant);
 			float refract_accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1 - rays[i].refraction_constant);
 		
-			//refract_accum = mix(refract_accum, rays[rays[i].child_refract_id].sss_base_colour, rays[rays[i].child_refract_id].sss_base_opacity);
-			//reflect_accum = mix(reflect_accum, rays[rays[i].child_reflect_id].sss_base_colour, rays[rays[i].child_reflect_id].sss_base_opacity);
+			refract_accum = mix(refract_accum, rays[rays[i].child_refract_id].sss_base_colour, rays[rays[i].child_refract_id].sss_base_opacity);
+			reflect_accum = mix(reflect_accum, rays[rays[i].child_reflect_id].sss_base_colour, rays[rays[i].child_reflect_id].sss_base_opacity);
 
 			accum = mix(refract_accum, reflect_accum, ratio);
 		}
 		else if(pure_refraction)
 		{
 			accum = mix(rays[i].base_color, rays[rays[i].child_refract_id].accumulated_color, 1.0 - rays[i].refraction_constant);	
-			//accum = mix(accum, rays[rays[i].child_refract_id].sss_base_colour, rays[rays[i].child_refract_id].sss_base_opacity);
+			accum = mix(accum, rays[rays[i].child_refract_id].sss_base_colour, rays[rays[i].child_refract_id].sss_base_opacity);
 		}
 		else if(pure_reflection)
 		{
 			accum = mix(rays[i].base_color, rays[rays[i].child_reflect_id].accumulated_color, rays[i].reflection_constant);
-			//accum = mix(accum, rays[rays[i].child_reflect_id].sss_base_colour, rays[rays[i].child_reflect_id].sss_base_opacity);
+			accum = mix(accum, rays[rays[i].child_reflect_id].sss_base_colour, rays[rays[i].child_reflect_id].sss_base_opacity);
 		}
 
 
