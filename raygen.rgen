@@ -358,36 +358,27 @@ float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue,
 {
 	const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
 
-	const vec3 light_o = get_random_light_pos(50, eye, direction, hue, eta);//getRandomPointOnTriangle(A.pos, B.pos, C.pos);
-	const vec3 light_d = RandomUnitVector(prng_state);//vec3(0);//cosWeightedRandomHemisphereDirection(get_normal_by_light_index(tri_index), prng_state);
-
+	const vec3 light_o = get_random_light_pos(50, eye, direction, hue, eta);
+	const vec3 light_d = RandomUnitVector(prng_state);
 
 	const float energy = 1.0;
 
 	int step_count = 0;
-	vec3 step_locations[max_bounces + 2];
-	vec3 step_directions[max_bounces + 2];
-
+	vec3 step_locations[max_bounces + 3];
+	vec3 step_directions[max_bounces + 3];
 
 	traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, eye, 0.001, direction, 10000.0, 0);
 
 	if(rayPayload.dist == -1)
 		return 0.0;
 
-	const vec3 hitPos = eye + direction * rayPayload.dist;
-
-
-
-
-
-
-
+	const vec3 first_hit_pos = eye + direction * rayPayload.dist;
 
 	step_locations[step_count] = light_o;
 	step_directions[step_count] = light_d;
 	step_count++;
 
-	if(false == is_clear_line_of_sight(eye, light_o))
+	if(false == is_clear_line_of_sight(first_hit_pos, light_o))
 	{	
 		vec3 o = light_o;
 		vec3 d = light_d;
@@ -408,16 +399,26 @@ float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue,
 			step_directions[step_count] = d;
 			step_count++;
 
-			if(true == is_clear_line_of_sight(eye, step_locations[step_count - 1]))
+			if(true == is_clear_line_of_sight(first_hit_pos, step_locations[step_count - 1]))
 				break;
 		}
 	}
+
+
+
+
+	step_locations[step_count] = first_hit_pos;
+	step_directions[step_count] = light_d;
+	step_count++;
 
 	step_locations[step_count] = eye;
 	step_directions[step_count] = direction;
 	step_count++;
 
-	
+
+
+
+
 
 	// Reverse the path
 	uint start = 0;
@@ -440,7 +441,7 @@ float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue,
 	
 	for(int i = 1; i < step_count - 1; i++)
 	{
-		step_directions[i] = (step_locations[i + 1] - step_locations[i]);
+		//step_directions[i] = (step_locations[i + 1] - step_locations[i]);
 	}
 	
 
