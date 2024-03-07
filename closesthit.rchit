@@ -101,7 +101,7 @@ void main()
 
 
 	// Do subsurface scattering coefficient and subsurface density
-	rayPayload.subsurface = 0.5;//texture(normalSampler, uv).g;
+	rayPayload.subsurface = 0.0;//texture(normalSampler, uv).g;
 	rayPayload.density = 0.0;//texture(normalSampler, uv).b;
 	
 	rayPayload.reflector = texture(normalSampler, uv).a;
@@ -112,10 +112,10 @@ void main()
 	// Make the transparent sphere reflective
 	if(rayPayload.opacity == 0.0)
 	{
-		rayPayload.opacity = 0.99;
+		rayPayload.opacity = 0.5;
 		rayPayload.reflector = 0.5;
 
-		rayPayload.color = vec3(1.0, 0.0, 0.0);
+		rayPayload.color = vec3(0.0, 1.0, 0.0);
 
 		//rayPayload.tint = 1.0;
 		//rayPayload.tint_colour = vec3(0,1,0);
