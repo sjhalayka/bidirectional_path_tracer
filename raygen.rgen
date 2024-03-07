@@ -438,14 +438,6 @@ float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue,
 		end--; 
 	}
 
-	
-	for(int i = 1; i < step_count - 1; i++)
-	{
-		//step_directions[i] = (step_locations[i + 1] - step_locations[i]);
-	}
-	
-
-
 
 	float ret_colour = 0;
 	float local_colour = energy;
@@ -456,8 +448,6 @@ float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue,
 		vec3 step_o = step_locations[i];
 		vec3 step_d = step_directions[i];
 
-
-
 		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, step_o, 0.001, step_d, 10000.0, 0);
 
 		local_colour *= (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
@@ -466,7 +456,10 @@ float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue,
 		total += mask.g;
 		total += mask.b;
 
-		if(i == step_count - 2 || (rayPayload.color.r > 1.0 || rayPayload.color.g > 1.0 || rayPayload.color.b > 1.0))
+		if(i == step_count - 2 || 
+		(rayPayload.color.r > 1.0 || 
+		rayPayload.color.g > 1.0 || 
+		rayPayload.color.b > 1.0))
 		{
 			ret_colour += local_colour;
 			break;
