@@ -383,10 +383,10 @@ float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue,
 
 	scatter_locations[step_count] = light_o;
 	scatter_directions[step_count] = light_d;
-	subsurface_locations[step_count] = vec3(0, 0, 0);
-	subsurface_directions[step_count] = vec3(0, 0, 0);
-	reflect_locations[step_count] = vec3(0, 0, 0);
-	reflect_directions[step_count] = vec3(0, 0, 0);
+	subsurface_locations[step_count] = light_o;
+	subsurface_directions[step_count] = light_d;
+	reflect_locations[step_count] = light_o;
+	reflect_directions[step_count] = light_d;
 	step_count++;
 
 	if(false == is_clear_line_of_sight(first_hit_pos, light_o))
@@ -424,20 +424,20 @@ float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue,
 
 	scatter_locations[step_count] = first_hit_pos;
 	scatter_directions[step_count] = light_d;
-	subsurface_locations[step_count] = vec3(0, 0, 0);
-	subsurface_directions[step_count] = vec3(0, 0, 0);
-	reflect_locations[step_count] = vec3(0, 0, 0);
-	reflect_directions[step_count] = vec3(0, 0, 0);
+	subsurface_locations[step_count] = first_hit_pos;
+	subsurface_directions[step_count] = light_d;
+	reflect_locations[step_count] = first_hit_pos;
+	reflect_directions[step_count] = light_d;
 	step_count++;
 
 
 
 	scatter_locations[step_count] = eye;
 	scatter_directions[step_count] = direction;
-	subsurface_locations[step_count] = vec3(0, 0, 0);
-	subsurface_directions[step_count] = vec3(0, 0, 0);
-	reflect_locations[step_count] = vec3(0, 0, 0);
-	reflect_directions[step_count] = vec3(0, 0, 0);
+	subsurface_locations[step_count] = eye;
+	subsurface_directions[step_count] = direction;
+	reflect_locations[step_count] = eye;
+	reflect_directions[step_count] = direction;
 	step_count++;
 
 
@@ -521,11 +521,11 @@ float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue,
 		}
 	
 		if(i == step_count - 1)
-		ret_colour += local_colour;	
+			ret_colour += local_colour;	
 	}
 
 
-	return ret_colour;// / total;
+	return ret_colour / total;
 }
 
 
