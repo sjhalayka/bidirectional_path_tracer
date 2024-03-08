@@ -383,12 +383,10 @@ float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue,
 
 	scatter_locations[step_count] = light_o;
 	scatter_directions[step_count] = light_d;
-
 	subsurface_locations[step_count] = vec3(0, 0, 0);
 	subsurface_directions[step_count] = vec3(0, 0, 0);
-	
+	reflect_locations[step_count] = vec3(0, 0, 0);
 	reflect_directions[step_count] = vec3(0, 0, 0);
-
 	step_count++;
 
 	if(false == is_clear_line_of_sight(first_hit_pos, light_o))
@@ -404,17 +402,19 @@ float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue,
 				return 0.0;
 
 			const vec3 hitPos = o + d * rayPayload.dist;
-
-			//o = hitPos + rayPayload.normal * 0.01;
-			//d = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
 			
-			scatter_locations[step_count] = o;
+			scatter_locations[step_count] = hitPos + rayPayload.normal * 0.01;
 			scatter_directions[step_count] = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
+			subsurface_locations[step_count] = hitPos - rayPayload.normal * 0.001 + RandomUnitVector(prng_state)*0.001;
 			subsurface_directions[step_count] = RandomUnitVector(prng_state);
+			reflect_locations[step_count] = hitPos + rayPayload.normal * 0.01;
 			reflect_directions[step_count] = reflect(d, rayPayload.normal);
 			step_count++;
 
-			if(true == is_clear_line_of_sight(first_hit_pos, scatter_locations[step_count - 1]))
+			o = scatter_locations[step_count - 1];
+			d = scatter_directions[step_count - 1];
+
+			if(true == is_clear_line_of_sight(first_hit_pos, hitPos))
 				break;
 		}
 	}
@@ -424,23 +424,20 @@ float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue,
 
 	scatter_locations[step_count] = first_hit_pos;
 	scatter_directions[step_count] = light_d;
-
+	subsurface_locations[step_count] = vec3(0, 0, 0);
 	subsurface_directions[step_count] = vec3(0, 0, 0);
+	reflect_locations[step_count] = vec3(0, 0, 0);
 	reflect_directions[step_count] = vec3(0, 0, 0);
-	
 	step_count++;
-
-
-
 
 
 
 	scatter_locations[step_count] = eye;
 	scatter_directions[step_count] = direction;
-	
+	subsurface_locations[step_count] = vec3(0, 0, 0);
 	subsurface_directions[step_count] = vec3(0, 0, 0);
+	reflect_locations[step_count] = vec3(0, 0, 0);
 	reflect_directions[step_count] = vec3(0, 0, 0);
-	
 	step_count++;
 
 
@@ -462,9 +459,17 @@ float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue,
 		scatter_directions[start] = scatter_directions[end]; 
 		scatter_directions[end] = temp; 
 
+		temp = subsurface_locations[start];  
+		subsurface_locations[start] = subsurface_locations[end]; 
+		subsurface_locations[end] = temp; 
+
 		temp = subsurface_directions[start];
 		subsurface_directions[start] = subsurface_directions[end]; 
 		subsurface_directions[end] = temp; 
+
+		temp = reflect_locations[start];  
+		reflect_locations[start] = reflect_locations[end]; 
+		reflect_locations[end] = temp; 
 
 		temp = reflect_directions[start];
 		reflect_directions[start] = reflect_directions[end]; 
@@ -476,7 +481,7 @@ float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue,
 
 
 	float ret_colour = 0;
-	float local_colour = energy;
+	float local_colour = 1.0;
 	float total = 0;
 
 	for(int i = 0; i < step_count - 1; i++)
@@ -501,7 +506,11 @@ float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue,
 			total += mask.r;
 			total += mask.g;
 			total += mask.b;
+
 		}
+
+
+	
 
 		if(reflect_directions[i] != vec3(0, 0, 0))
 		{
@@ -513,9 +522,13 @@ float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue,
 			total += mask.g;
 			total += mask.b;
 		}
+	
+		if(i == step_count - 2)
+		ret_colour += local_colour;	
 	}
 
-	return local_colour / total;
+
+	return ret_colour / total;
 }
 
 
