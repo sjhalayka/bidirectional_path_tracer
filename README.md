@@ -11,8 +11,7 @@ Based off of Sascha Willems' raytracingreflections code.
 
 Cornell box by Rob Rau.
 
-![image](https://github.com/sjhalayka/bidirectional_path_tracer/assets/16404554/cec93232-9489-408d-9ca1-eace3ab703c0)
-
+![image](https://github.com/sjhalayka/bidirectional_path_tracer/assets/16404554/522482ce-2132-458f-b7d8-46190c5690cb)
 
 To obtain and compile the demo code:
 
