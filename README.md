@@ -11,7 +11,8 @@ Based off of Sascha Willems' raytracingreflections code.
 
 Model by Rob Rau.
 
-![image](https://github.com/sjhalayka/cornell_box_textured/assets/16404554/046527b3-82d5-4034-b701-ff651bb175d4)
+![image](https://github.com/sjhalayka/bidirectional_path_tracer/assets/16404554/cec93232-9489-408d-9ca1-eace3ab703c0)
+
 
 To obtain and compile the demo code:
 
