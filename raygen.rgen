@@ -1187,12 +1187,19 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 
 
 				if(ubo.screenshot_mode)
-				
-				// 		rays[i].base_color = get_radiance_backward(250, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
-			
-					rays[i].base_color = get_radiance_forward(250, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+					rays[i].base_color = get_radiance_backward(250, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
 				else
-					rays[i].base_color = get_radiance_forward(25, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+					rays[i].base_color = get_radiance_backward(25, 5, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+
+
+
+				//if(ubo.screenshot_mode)
+				//	rays[i].base_color = get_radiance_forward(250, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+				//else
+				//	rays[i].base_color = get_radiance_forward(25, rays[i].origin.xyz, rays[i].direction.xyz, hue, eta);
+
+
+
 
 				traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, rays[i].origin.xyz, tmin, rays[i].direction.xyz, tmax, 0);
 								
