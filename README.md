@@ -9,7 +9,7 @@ ValueData : Number of seconds to delay. 2 seconds is the default value.<br>
 
 Based off of Sascha Willems' raytracingreflections code.
 
-Model by Rob Rau.
+Cornell box by Rob Rau.
 
 ![image](https://github.com/sjhalayka/bidirectional_path_tracer/assets/16404554/cec93232-9489-408d-9ca1-eace3ab703c0)
 
