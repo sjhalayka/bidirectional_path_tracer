@@ -15,9 +15,10 @@ layout (constant_id = 0) const int MAX_RECURSION = 0;
 const int buffer_size = 8; // Change this in raytracingreflections.cpp as well
 const int max_bounces = 25;
 
+
+float get_omni_sky_or_light(const int samples, const vec3 origin, const float hue, const float eta);
 float get_radiance_backward(const int samples, const int steps, const vec3 origin, const vec3 seed_direction, const float hue, const float eta);
 float get_omni_radiance_backward(const int samples, const int steps, const vec3 origin, const float hue, const float eta);
-float get_omni_radiance_forward(const int samples, const vec3 origin, const float hue, const float eta);
 
 
 
@@ -337,231 +338,6 @@ Vertex unpack(uint index)
 
 
 
-bool is_clear_line_of_sight(vec3 pos_start, const vec3 pos_end)
-{
-	RayPayload r = rayPayload;
-
-	vec3 dir = normalize(pos_end - pos_start);
-
-	traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, pos_start, 0.001, dir, 10000.0, 0);
-
-	if(rayPayload.dist == -1)
-	{
-		rayPayload = r;
-		return false;
-	}
-
-	vec3 hitPos = pos_start + dir * rayPayload.dist;
-
-	if(distance(hitPos, pos_end) < 0.01)
-	{
-		rayPayload = r;
-		return true;
-	}
-
-	rayPayload = r;
-	return false;
-}
-
-
-bool get_random_light_pos(inout vec3 final_pos, inout vec3 final_normal, inout vec3 final_colour, const int steps, const vec3 origin, const vec3 direction, const float hue, const float eta)
-{
-	vec3 o = origin;
-	vec3 d = direction;
-
-	for(int i = 0; i < steps; i++)
-	{
-		const float tmin = 0.001;
-		const float tmax = 10000.0;
-
-		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, tmin, d, tmax, 0);
-
-		if(rayPayload.dist == -1.0)
-		{
-			final_pos = final_normal = final_colour = vec3(0, 0, 0);
-			return false;
-		}
-
-		// Hit a light
-		if(rayPayload.color.r > 1
-		|| rayPayload.color.g > 1
-		|| rayPayload.color.b > 1)
-		{
-			final_pos = o + d * rayPayload.dist;
-			final_normal = rayPayload.normal;
-			final_colour = rayPayload.color;
-			
-			return true;
-		}
-	}
-
-	final_pos = final_normal = final_colour = vec3(0, 0, 0);
-	return false;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue, const float eta)
-{
-	const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
-
-
-	vec3 light_o, light_normal, light_colour;
-	get_random_light_pos(light_o, light_normal, light_colour, 10, eye, direction, hue, eta);
-	const vec3 light_d = RandomUnitVector(prng_state);
-
-	const float energy = 1.0;
-
-	int step_count = 0;
-	vec3 step_locations[max_bounces + 3];
-	vec3 step_directions[max_bounces + 3];
-
-	traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, eye, 0.001, direction, 10000.0, 0);
-
-	if(rayPayload.dist == -1)
-		return 0.0;
-
-	const vec3 first_hit_pos = eye + direction * rayPayload.dist;
-
-	step_locations[step_count] = light_o;
-	step_directions[step_count] = light_d;
-	step_count++;
-
-	if(false == is_clear_line_of_sight(first_hit_pos, light_o))
-	{	
-		vec3 o = light_o;
-		vec3 d = light_d;
-
-		for(int i = 0; i < max_bounces; i++)
-		{
-			traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, 0.001, d, 10000.0, 0);
-
-			if(rayPayload.dist == -1)
-				return 0.0;
-
-			const vec3 hitPos = o + d * rayPayload.dist;
-
-			o = hitPos + rayPayload.normal * 0.01;
-			d = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
-			
-			step_locations[step_count] = o;
-			step_directions[step_count] = d;
-			step_count++;
-
-			if(true == is_clear_line_of_sight(first_hit_pos, step_locations[step_count - 1]))
-				break;
-		}
-	}
-
-
-
-
-	step_locations[step_count] = first_hit_pos;
-	step_directions[step_count] = light_d;
-	step_count++;
-
-	step_locations[step_count] = eye;
-	step_directions[step_count] = direction;
-	step_count++;
-
-
-
-
-
-
-	// Reverse the path
-	uint start = 0;
-	uint end = step_count - 1;
-
-	while(start < end) 
-	{ 
-		vec3 temp = step_locations[start];  
-		step_locations[start] = step_locations[end]; 
-		step_locations[end] = temp; 
-
-		temp = step_directions[start];
-		step_directions[start] = step_directions[end]; 
-		step_directions[end] = temp; 
-
-		start++;
-		end--; 
-	}
-
-	
-	for(int i = 1; i < step_count - 1; i++)
-	{
-		//step_directions[i] = (step_locations[i + 1] - step_locations[i]);
-	}
-	
-
-
-
-	float ret_colour = 0;
-	float local_colour = energy;
-	float total = 0;
-
-	for(int i = 0; i < step_count - 1; i++)
-	{
-		vec3 step_o = step_locations[i];
-		vec3 step_d = step_directions[i];
-
-
-
-		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, step_o, 0.001, step_d, 10000.0, 0);
-
-		local_colour *= (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
-
-		total += mask.r;
-		total += mask.g;
-		total += mask.b;
-
-		if(i == step_count - 2 || (rayPayload.color.r > 1.0 || rayPayload.color.g > 1.0 || rayPayload.color.b > 1.0))
-		{
-			ret_colour += local_colour;
-			break;
-		}
-	}
-
-	return ret_colour / total;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-float get_radiance_forward(const int samples, const vec3 origin, const vec3 direction, const float hue, const float eta)
-{
-	RayPayload r = rayPayload;
-
-	float ret_colour = 0.0;
-
-	for(int s = 0; s < samples; s++)
-		ret_colour += trace_path_forward2(origin, direction, hue, eta);
-
-	rayPayload = r;
-
-	return ret_colour / samples;
-}
-
-
-
 
 
 
@@ -666,99 +442,6 @@ void get_origin_and_direction(inout vec4 origin, inout vec4 direction, float x, 
 }
 
 
-bool is_inside_mesh(const vec3 location, inout vec3 collision_pos, inout vec3 collision_dir, inout vec3 collision_colour)
-{
-	RayPayload r = rayPayload;
-	bool is_outside = false;
-
-	const vec3 direction = vec3(0, 1, 0); // Any non-zero vector will do
-
-	traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, location, 0.001, direction, 10000.0, 0);
-
-	if(rayPayload.dist == -1.0 || dot(direction, rayPayload.normal) <= 0.0)
-		is_outside = true;
-
-	if(rayPayload.dist == -1.0)
-	{
-		collision_pos = location;// + direction;
-	}
-	else
-	{
-		collision_pos = location + direction*rayPayload.dist;
-	}
-
-	collision_dir = direction;
-	collision_colour = rayPayload.color;
-
-	rayPayload = r;
-	return !is_outside;
-}
-
-
-int do_random_walk_until_exits_mesh2(bool do_final_gathering, const vec3 velocity, const float velocity_constant, const float sss_constant, const float sss_density, const int max_walk_length, const vec3 pos, inout vec3 final_pos, inout vec3 final_dir, inout float base_colour, inout float base_opacity, const float hue, const float initial_colour)
-{
-	final_pos = pos;
-	
-	base_opacity = 0.0;
-	base_colour = 0.0;
-
-	int i = 1;
-
-	vec3 collision_pos = vec3(0, 0, 0);
-	vec3 collision_dir = vec3(0, 0, 0);
-	vec3 collision_colour = vec3(0, 0, 0);
-
-	while(is_inside_mesh(final_pos, collision_pos, collision_dir, collision_colour) && i <= max_walk_length)
-	{
-		vec3 prng_velocity = mix(velocity, cosWeightedRandomHemisphereDirection(velocity, prng_state), sss_constant);
-
-		final_pos += (1 - sss_density)*prng_velocity*max_walk_length;//(1.0/float(max_walk_length));//velocity_constant;
-		//final_pos += sss_constant*RandomUnitVector(prng_state)*(1.0/float(max_walk_length));//velocity_constant;
-
-		const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
-		float colour = collision_colour.r*mask.r + collision_colour.g*mask.g + collision_colour.b*mask.b;
- 
-		base_colour += initial_colour;
-		base_opacity += 1.0/float(max_walk_length);
-
-		i++;
-	}
-
-
-	if(do_final_gathering)
-	{
-		RayPayload r = rayPayload;
-
-		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, final_pos, 0.001, velocity, 10000.0, 0);
-
-		const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
-		const float last_colour = rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b;
-
-		base_colour = mix(last_colour, initial_colour, float(i)/float(max_walk_length));
-	
-		rayPayload = r;
-	}
-	else
-	{
-		base_colour = initial_colour;
-	}
-	
-	base_opacity = clamp(base_opacity, 0, 1);
-
-
-
-
-//	base_colour = mix(base_colour, 0, base_opacity);
-
-	//base_colour /= i;
-	//base_colour = 1 - clamp(base_colour, 0, 1);
-
-//	base_colour = stepAndOutputRNGFloat(prng_state);
-//	base_opacity = 1;
-
-	return i;
-}
-
 
 
 float trace_path_backward(const int steps, const vec3 origin, const vec3 direction, const float hue, const float eta)
@@ -834,23 +517,16 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 				vec3 o_subsurface = hitPos - rayPayload.normal * 0.001 + RandomUnitVector(prng_state)*0.001;
 				vec3 d_subsurface = RandomUnitVector(prng_state);
 
-				
-				//float lighting = stepAndOutputRNGFloat(prng_state);//get_omni_radiance_backward(10, 5, o_subsurface, hue, eta);
-
-
-
 				traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o_subsurface, tmin, d_subsurface, tmax, 0);
-				local_colour += rayPayload.subsurface*(rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
-				//local_colour += lighting;
 
+				float sss_colour = get_omni_sky_or_light(25, o_subsurface, hue, eta);
 
 
 				total += mask.r;
 				total += mask.g;
 				total += mask.b;
 
-
-
+				local_colour += rayPayload.subsurface*(rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
 			}
 
 			if(rayPayload.reflector > 0)
@@ -947,15 +623,22 @@ float get_omni_radiance_backward(const int samples, const int steps, const vec3 
 }
 
 
+float trace_path_sky_or_light(const vec3 origin, const vec3 direction, const float hue, const float eta)
+{
+	
 
-float get_omni_radiance_forward(const int samples, const vec3 origin, const float hue, const float eta)
+
+	return 1.0;
+}
+
+float get_omni_sky_or_light(const int samples, const vec3 origin, const float hue, const float eta)
 {
 	RayPayload r = rayPayload;
 
 	float ret_colour = 0.0;
 
 	for(int s = 0; s < samples; s++)
-		ret_colour += trace_path_forward2(origin, RandomUnitVector(prng_state), hue, eta);
+		ret_colour += trace_path_sky_or_light(origin, RandomUnitVector(prng_state), hue, eta);
 
 	rayPayload = r;
 
