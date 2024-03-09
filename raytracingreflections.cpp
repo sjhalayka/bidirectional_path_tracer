@@ -406,7 +406,7 @@ public:
 
 	void screenshot(size_t num_cams_wide, const char* filename)
 	{
-		bool do_denoising = false;
+		bool do_denoising = true;
 
 		if (num_cams_wide == 0)
 			return;
@@ -907,11 +907,11 @@ public:
 				indexBuffer,
 				vertexBuffer,
 				gltfimages,
-				//"C:/temp/rob_rau_cornell/gltf/cornell.gltf",
+				"C:/temp/rob_rau_cornell/gltf/cornell.gltf",
 				//"C:/temp/rob_rau_cornell/circle_light/circle_light.gltf",
 				//"C:/temp/rob_rau_cornell/sphere_light/sphere_light.gltf",
 				///"C:/temp/rob_rau_cornell/simple_building/simple_building.gltf",
-				"C:/temp/rob_rau_cornell/bunny2/bunny2.gltf",
+				//"C:/temp/rob_rau_cornell/bunny2/bunny2.gltf",
 				//"C:/temp/rob_rau_cornell/bunny2/bunny_array.gltf",
 				//"C:/temp/rob_rau_cornell/prism3/cornell_prism3.gltf",
 				//"C:/temp/rob_rau_cornell/barrel/barrel.gltf",
