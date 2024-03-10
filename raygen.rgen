@@ -652,7 +652,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 					total += mask.g;
 					total += mask.b;
 
-					local_colour += (1.0 - pow(running_depth/total_depth, 1.0))*r.subsurface*(sss_colour.r*mask.r + sss_colour.g*mask.g + sss_colour.b*mask.b);
+					local_colour += (1.0 - running_depth/total_depth)*r.subsurface*(sss_colour.r*mask.r + sss_colour.g*mask.g + sss_colour.b*mask.b);
 				
 					ret_colour += local_colour;
 				}
