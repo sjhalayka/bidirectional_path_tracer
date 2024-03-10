@@ -444,6 +444,34 @@ void get_origin_and_direction(inout vec4 origin, inout vec4 direction, float x, 
 
 
 
+bool is_inside_mesh(const vec3 location, inout vec3 collision_pos, inout vec3 collision_dir, inout vec3 collision_colour)
+{
+	RayPayload r = rayPayload;
+	bool is_outside = false;
+
+	const vec3 direction = vec3(0, 1, 0); // Any non-zero vector will do
+
+	traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, location, 0.001, direction, 10000.0, 0);
+
+	if(rayPayload.dist == -1.0 || dot(direction, rayPayload.normal) <= 0.0)
+		is_outside = true;
+
+	if(rayPayload.dist == -1.0)
+	{
+		collision_pos = location;// + direction;
+	}
+	else
+	{
+		collision_pos = location + direction*rayPayload.dist;
+	}
+
+	collision_dir = direction;
+	collision_colour = rayPayload.color;
+
+	rayPayload = r;
+	return !is_outside;
+}
+
 
 
 
@@ -567,14 +595,13 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 			
 			if(rayPayload.subsurface > 0)
 			{
-				vec3 o_subsurface = hitPos - rayPayload.normal * 0.005 + RandomUnitVector(prng_state)*0.001;
-				vec3 d_subsurface = RandomUnitVector(prng_state);
+				vec3 o_subsurface = hitPos - rayPayload.normal * 0.001 + RandomUnitVector(prng_state)*0.001;
 
 				vec3 light_o, light_normal, sss_colour;
 				
 				bool got_light = false;
 
-				for(int i = 0; i < 1000; i++)
+				for(int i = 0; i < 100; i++)
 				{
 					got_light = get_random_light_pos(light_o, light_normal, sss_colour, 10, o_subsurface, hue, eta);
 				
@@ -584,11 +611,48 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 		
 				if(got_light)
 				{
+					const vec3 light_dir = normalize(light_o - o_subsurface);
+					vec3 trace_position = o_subsurface;
+					float total_depth = distance(light_o, o_subsurface);
+					float running_depth = stepAndOutputRNGFloat(prng_state)*total_depth;
+
+					bool inside = true;
+
+					vec3 last_trace_position = trace_position;
+
+					while(true)
+					{
+						traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, trace_position, tmin, light_dir, tmax, 0);
+
+						if(false == inside)
+						{
+							running_depth += distance(trace_position, last_trace_position);
+						}
+
+						inside = !inside;
+
+						// Hit a light
+						if(rayPayload.color.r > 1
+						|| rayPayload.color.g > 1
+						|| rayPayload.color.b > 1)
+						{
+							break;
+						}
+
+						if(rayPayload.dist == -1.0)
+						{
+							break;
+						}
+					
+						last_trace_position = trace_position;
+						trace_position = trace_position + light_dir*rayPayload.dist;
+					}
+
 					total += mask.r;
 					total += mask.g;
 					total += mask.b;
 
-					local_colour +=  rayPayload.subsurface*(sss_colour.r*mask.r + sss_colour.g*mask.g + sss_colour.b*mask.b);
+					local_colour += (1.0 - pow(running_depth/total_depth, 1.0))*r.subsurface*(sss_colour.r*mask.r + sss_colour.g*mask.g + sss_colour.b*mask.b);
 				
 					ret_colour += local_colour;
 				}
@@ -598,7 +662,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 					total += mask.g;
 					total += mask.b;
 
-					local_colour = 0;
+					local_colour += 0;
 
 					ret_colour += local_colour;
 				}
