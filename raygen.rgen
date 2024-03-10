@@ -590,8 +590,6 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 					total += mask.g;
 					total += mask.b;
 
-					float d = distance(hitPos, light_o);
-
 					local_colour += rayPayload.subsurface*(sss_colour.r*mask.r + sss_colour.g*mask.g + sss_colour.b*mask.b);
 				}
 				else
