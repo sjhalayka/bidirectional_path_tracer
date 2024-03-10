@@ -222,9 +222,6 @@ uint prng_state = 0;
 
 
 
-
-
-
 float stepAndOutputRNGFloat(inout uint rngState)
 {
   // Condensed version of pcg_output_rxs_m_xs_32_32, with simple conversion to floating-point [0,1].
@@ -525,6 +522,13 @@ bool get_random_light_pos(inout vec3 final_pos, inout vec3 final_normal, inout v
 
 
 
+vec3 light_o, light_normal, sss_colour;
+
+bool got_light = false;
+
+
+
+
 float trace_path_backward(const int steps, const vec3 origin, const vec3 direction, const float hue, const float eta)
 {
 	vec3 o = origin;
@@ -591,30 +595,24 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 
 		if(stepAndOutputRNGFloat(prng_state) <= rayPayload.opacity)
 		{
-			RayPayload r = rayPayload;
+
 			
 			if(rayPayload.subsurface > 0)
 			{
-				vec3 o_subsurface = hitPos - rayPayload.normal * 0.001 + RandomUnitVector(prng_state)*0.001;
 
-				vec3 light_o, light_normal, sss_colour;
-				
-				bool got_light = false;
+				vec3 o_subsurface = hitPos - rayPayload.normal * 0.005 + RandomUnitVector(prng_state)*0.001;
 
-				for(int i = 0; i < 100; i++)
-				{
-					got_light = get_random_light_pos(light_o, light_normal, sss_colour, 10, o_subsurface, hue, eta);
 				
-					if(got_light)
-						break;
-				}
 		
 				if(got_light)
 				{
+					RayPayload r = rayPayload;
+
+
 					const vec3 light_dir = normalize(light_o - o_subsurface);
 					vec3 trace_position = o_subsurface;
 					float total_depth = distance(light_o, o_subsurface);
-					float running_depth = stepAndOutputRNGFloat(prng_state)*total_depth;
+					float running_depth = 0;
 
 					bool inside = true;
 
@@ -623,13 +621,11 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 					while(true)
 					{
 						traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, trace_position, tmin, light_dir, tmax, 0);
-
-						if(false == inside)
+						
+						if(rayPayload.dist == -1.0)
 						{
-							running_depth += distance(trace_position, last_trace_position);
+							break;
 						}
-
-						inside = !inside;
 
 						// Hit a light
 						if(rayPayload.color.r > 1
@@ -639,22 +635,29 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 							break;
 						}
 
-						if(rayPayload.dist == -1.0)
-						{
-							break;
-						}
-					
 						last_trace_position = trace_position;
 						trace_position = trace_position + light_dir*rayPayload.dist;
+
+
+						if(false == inside)
+							running_depth += distance(trace_position, last_trace_position);
+
+						inside = !inside;
+
 					}
+
+					
+					rayPayload = r;
 
 					total += mask.r;
 					total += mask.g;
 					total += mask.b;
 
-					local_colour += (1.0 - running_depth/total_depth)*r.subsurface*(sss_colour.r*mask.r + sss_colour.g*mask.g + sss_colour.b*mask.b);
+					local_colour += (1.0 - running_depth/total_depth)*rayPayload.subsurface*(sss_colour.r*mask.r + sss_colour.g*mask.g + sss_colour.b*mask.b);
 				
-					ret_colour += local_colour;
+				//	ret_colour += local_colour;
+
+
 				}
 				else
 				{
@@ -667,7 +670,6 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 					ret_colour += local_colour;
 				}
 
-
 				//total += mask.r;
 				//total += mask.g;
 				//total += mask.b;
@@ -677,8 +679,10 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 
 			if(rayPayload.reflector > 0)
 			{
-				vec3 o_reflect = hitPos + rayPayload.normal * 0.01;
-				vec3 d_reflect = reflect(d, rayPayload.normal);
+				RayPayload r = rayPayload;
+
+				vec3 o_reflect = hitPos + r.normal * 0.01;
+				vec3 d_reflect = reflect(d, r.normal);
 
 				traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o_reflect, tmin, d_reflect, tmax, 0);
 
@@ -687,9 +691,11 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 				total += mask.b;
 
 				local_colour += rayPayload.reflector*(rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
+			
+				rayPayload = r;
 			}
 
-			rayPayload = r;
+
 
 			vec3 o_scatter = hitPos + rayPayload.normal * 0.01;
 			vec3 d_scatter = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
@@ -1129,6 +1135,16 @@ void main()
 		total += mask;
 		color += f*mask;
 	}
+
+
+	for(int i = 0; i < 1000; i++)
+	{
+		bool got_light = get_random_light_pos(light_o, light_normal, sss_colour, 10, origin.xyz, curr_hue, curr_eta);
+				
+		if(got_light)
+			break;
+	}
+
 
 
 	// Do pseudorandom depth of field (DOF) rays
