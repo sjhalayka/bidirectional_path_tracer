@@ -441,7 +441,7 @@ void get_origin_and_direction(inout vec4 origin, inout vec4 direction, float x, 
 
 
 
-bool is_inside_mesh(const vec3 location, inout vec3 collision_pos, inout vec3 collision_dir, inout vec3 collision_colour)
+bool is_inside_mesh(const vec3 location)
 {
 	RayPayload r = rayPayload;
 	bool is_outside = false;
@@ -453,18 +453,6 @@ bool is_inside_mesh(const vec3 location, inout vec3 collision_pos, inout vec3 co
 	if(rayPayload.dist == -1.0 || dot(direction, rayPayload.normal) <= 0.0)
 		is_outside = true;
 
-	if(rayPayload.dist == -1.0)
-	{
-		collision_pos = location;// + direction;
-	}
-	else
-	{
-		collision_pos = location + direction*rayPayload.dist;
-	}
-
-	collision_dir = direction;
-	collision_colour = rayPayload.color;
-
 	rayPayload = r;
 	return !is_outside;
 }
@@ -472,7 +460,7 @@ bool is_inside_mesh(const vec3 location, inout vec3 collision_pos, inout vec3 co
 
 
 
-bool get_random_light_pos(inout vec3 final_pos, inout vec3 final_normal, inout vec3 final_colour, const int steps, const vec3 origin, const float hue, const float eta)
+bool get_random_light_pos(inout vec3 final_pos, inout vec3 final_normal, inout vec3 final_colour, const int steps, const vec3 origin)
 {
 	RayPayload r = rayPayload;
 
@@ -508,11 +496,7 @@ bool get_random_light_pos(inout vec3 final_pos, inout vec3 final_normal, inout v
 			return true;
 		}
 
-		vec3 o_scatter = hitPos + rayPayload.normal * 0.01;
-		vec3 d_scatter = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
-
-		o = o_scatter;
-		d = d_scatter;
+		o = hitPos + rayPayload.normal * 0.01;
 	}
 
 	final_pos = final_normal = final_colour = vec3(0, 0, 0);
@@ -595,39 +579,49 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 
 		if(stepAndOutputRNGFloat(prng_state) <= rayPayload.opacity)
 		{
-
-			
 			if(rayPayload.subsurface > 0)
 			{
-
 				vec3 o_subsurface = hitPos - rayPayload.normal * 0.005 + RandomUnitVector(prng_state)*0.001;
-
 				
-		
+				got_light = false;
+
+				for(int i = 0; i < 1000; i++)
+				{
+					got_light = get_random_light_pos(light_o, light_normal, sss_colour, 5, origin.xyz);
+				
+					if(got_light)
+						break;
+				}
+
 				if(got_light)
 				{
 					RayPayload r = rayPayload;
-
 
 					const vec3 light_dir = normalize(light_o - o_subsurface);
 					vec3 trace_position = o_subsurface;
 					float total_depth = distance(light_o, o_subsurface);
 					float running_depth = 0;
 
-					bool inside = true;
+					bool inside = is_inside_mesh(o_subsurface);
 
 					vec3 last_trace_position = trace_position;
 
 					while(true)
 					{
 						traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, trace_position, tmin, light_dir, tmax, 0);
-						
+
+						last_trace_position = trace_position;
+						trace_position = trace_position + light_dir*rayPayload.dist;
+
+						if(inside)
+							running_depth += distance(trace_position, last_trace_position);
+
 						if(rayPayload.dist == -1.0)
 						{
 							break;
 						}
 
-						// Hit a light
+						// Hit the light
 						if(rayPayload.color.r > 1
 						|| rayPayload.color.g > 1
 						|| rayPayload.color.b > 1)
@@ -635,18 +629,12 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 							break;
 						}
 
-						last_trace_position = trace_position;
-						trace_position = trace_position + light_dir*rayPayload.dist;
-
-
-						if(false == inside)
-							running_depth += distance(trace_position, last_trace_position);
-
+						
 						inside = !inside;
+
 
 					}
 
-					
 					rayPayload = r;
 
 					total += mask.r;
@@ -655,9 +643,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 
 					local_colour += (1.0 - running_depth/total_depth)*rayPayload.subsurface*(sss_colour.r*mask.r + sss_colour.g*mask.g + sss_colour.b*mask.b);
 				
-				//	ret_colour += local_colour;
-
-
+					ret_colour += local_colour;
 				}
 				else
 				{
@@ -665,7 +651,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 					total += mask.g;
 					total += mask.b;
 
-					local_colour += 0;
+				//	return 1.0*mask.r + 0.5*mask.g + 0.0*mask.b; // orange for debuggin
 
 					ret_colour += local_colour;
 				}
@@ -864,6 +850,8 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 	rays[0].level = 0;
 	rays[0].external_reflection_ray = true;
 	current_buffer_index++;
+
+
 
 
 
@@ -1105,6 +1093,16 @@ void main()
 		gl_LaunchSizeEXT.x,
 		gl_LaunchSizeEXT.y);
 
+
+
+
+
+
+
+
+
+
+
 	// Do chromatic aberration (good for making rainbows via prisms)
 	const int channels = 3;
 	
@@ -1136,15 +1134,9 @@ void main()
 		color += f*mask;
 	}
 
+	
 
-	for(int i = 0; i < 1000; i++)
-	{
-		bool got_light = get_random_light_pos(light_o, light_normal, sss_colour, 10, origin.xyz, curr_hue, curr_eta);
-				
-		if(got_light)
-			break;
-	}
-
+	
 
 
 	// Do pseudorandom depth of field (DOF) rays
