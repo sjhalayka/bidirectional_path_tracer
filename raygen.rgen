@@ -496,7 +496,7 @@ bool get_random_light_pos(inout vec3 final_pos, inout vec3 final_normal, inout v
 			return true;
 		}
 
-		o = hitPos + rayPayload.normal * 0.01;
+		o = hitPos;// + rayPayload.normal * 0.01;
 	}
 
 	final_pos = final_normal = final_colour = vec3(0, 0, 0);
@@ -529,6 +529,8 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 
 	const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
 
+	bool did_initial_scatter = false;
+
 	for(int i = 0; i < steps; i++)
 	{
 		const float tmin = 0.001;
@@ -547,7 +549,10 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 		}
 		else
 		{
+			if(true)//false == did_initial_scatter)
 			local_colour *= (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
+
+			did_initial_scatter = true;
 		}
 
 		// If hit the sky
@@ -585,9 +590,9 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 				
 				got_light = false;
 
-				for(int i = 0; i < 1000; i++)
+				for(int i = 0; i < 10000; i++)
 				{
-					got_light = get_random_light_pos(light_o, light_normal, sss_colour, 5, origin.xyz);
+					got_light = get_random_light_pos(light_o, light_normal, sss_colour, 5, o_subsurface);
 				
 					if(got_light)
 						break;
@@ -599,27 +604,24 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 
 					const vec3 light_dir = normalize(light_o - o_subsurface);
 					vec3 trace_position = o_subsurface;
-					float total_depth = distance(light_o, o_subsurface);
+					const float total_depth = distance(light_o, o_subsurface);
 					float running_depth = 0;
-
-					bool inside = is_inside_mesh(o_subsurface);
-
+		
 					vec3 last_trace_position = trace_position;
 
 					while(true)
 					{
 						traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, trace_position, tmin, light_dir, tmax, 0);
 
-						last_trace_position = trace_position;
-						trace_position = trace_position + light_dir*rayPayload.dist;
-
-						if(inside)
-							running_depth += distance(trace_position, last_trace_position);
-
+						// Hit the sky
 						if(rayPayload.dist == -1.0)
-						{
 							break;
-						}
+
+						last_trace_position = trace_position;
+						trace_position += light_dir*rayPayload.dist;
+
+						if(dot(light_dir, rayPayload.normal) >= 0.0)
+							running_depth += distance(trace_position, last_trace_position);
 
 						// Hit the light
 						if(rayPayload.color.r > 1
@@ -628,11 +630,6 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 						{
 							break;
 						}
-
-						
-						inside = !inside;
-
-
 					}
 
 					rayPayload = r;
@@ -641,7 +638,11 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 					total += mask.g;
 					total += mask.b;
 
-					local_colour += (1.0 - running_depth/total_depth)*rayPayload.subsurface*(sss_colour.r*mask.r + sss_colour.g*mask.g + sss_colour.b*mask.b);
+					float x = 1.0 - running_depth/total_depth;
+
+					 x = (x - 0.5) * 5.0 + 0.5;
+
+					local_colour += x;//*rayPayload.subsurface*(sss_colour.r*mask.r + sss_colour.g*mask.g + sss_colour.b*mask.b);
 				
 					ret_colour += local_colour;
 				}
@@ -651,7 +652,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 					total += mask.g;
 					total += mask.b;
 
-				//	return 1.0*mask.r + 0.5*mask.g + 0.0*mask.b; // orange for debuggin
+					return 1.0*mask.r + 0.5*mask.g + 0.0*mask.b; // orange for debuggin
 
 					ret_colour += local_colour;
 				}
@@ -680,8 +681,6 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 			
 				rayPayload = r;
 			}
-
-
 
 			vec3 o_scatter = hitPos + rayPayload.normal * 0.01;
 			vec3 d_scatter = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
