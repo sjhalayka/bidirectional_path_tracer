@@ -1096,15 +1096,9 @@ void main()
 		gl_LaunchSizeEXT.y);
 
 
-
-
-
-		while(got_light == false)
-		{
-			got_light = get_random_light_pos(light_o, light_normal, sss_colour, 5, vec3(0, 0, 0));
-		}
-
-
+	// For subsurface scattering later on
+	while(got_light == false)
+		got_light = get_random_light_pos(light_o, light_normal, sss_colour, 5, vec3(0, 0, 0));
 
 
 	// Do chromatic aberration (good for making rainbows via prisms)
