@@ -642,7 +642,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 
 					 x = (x - 0.5) * 5.0 + 0.5;
 
-					local_colour += x;//*rayPayload.subsurface*(sss_colour.r*mask.r + sss_colour.g*mask.g + sss_colour.b*mask.b);
+					local_colour += min(x, rayPayload.subsurface*(sss_colour.r*mask.r + sss_colour.g*mask.g + sss_colour.b*mask.b));
 				
 					ret_colour += local_colour;
 				}
