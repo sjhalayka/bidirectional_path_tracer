@@ -651,7 +651,8 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 
 					sss_colour /= largest_component;
 
-					local_colour += x*rayPayload.subsurface;//*(sss_colour.r*mask.r + sss_colour.g*mask.g + sss_colour.b*mask.b) *(last_colour.r*mask.r + last_colour.g*mask.g + last_colour.b*mask.b);
+					local_colour += x*rayPayload.subsurface;
+					//local_colour += (sss_colour.r*mask.r + sss_colour.g*mask.g + sss_colour.b*mask.b) *(last_colour.r*mask.r + last_colour.g*mask.g + last_colour.b*mask.b);
 				
 					ret_colour += local_colour;
 				}
