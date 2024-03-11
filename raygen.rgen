@@ -588,15 +588,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 			{
 				vec3 o_subsurface = hitPos - rayPayload.normal * 0.005 + RandomUnitVector(prng_state)*0.001;
 				
-				got_light = false;
 
-				for(int i = 0; i < 10000; i++)
-				{
-					got_light = get_random_light_pos(light_o, light_normal, sss_colour, 5, o_subsurface);
-				
-					if(got_light)
-						break;
-				}
 
 				if(got_light)
 				{
@@ -1107,8 +1099,10 @@ void main()
 
 
 
-
-
+		while(got_light == false)
+		{
+			got_light = get_random_light_pos(light_o, light_normal, sss_colour, 5, vec3(0, 0, 0));
+		}
 
 
 
