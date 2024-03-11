@@ -611,8 +611,6 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 						if(rayPayload.dist == -1.0)
 							break;
 
-
-
 						last_trace_position = trace_position;
 						trace_position += light_dir*rayPayload.dist;
 
@@ -641,6 +639,8 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 					float x = 1.0 - running_depth/total_depth;
 					x = (x - 0.5) * 5.0 + 0.5; // contrast
 
+					sss_colour = vec3(10.0, 5, 0);
+
 					float largest_component = sss_colour.r;
 
 					if(sss_colour.g > largest_component)
@@ -651,7 +651,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 
 					sss_colour /= largest_component;
 
-					local_colour += x*rayPayload.subsurface*(sss_colour.r*mask.r + sss_colour.g*mask.g + sss_colour.b*mask.b)*(last_colour.r*mask.r + last_colour.g*mask.g + last_colour.b*mask.b);
+					local_colour += x*rayPayload.subsurface;//*(sss_colour.r*mask.r + sss_colour.g*mask.g + sss_colour.b*mask.b) *(last_colour.r*mask.r + last_colour.g*mask.g + last_colour.b*mask.b);
 				
 					ret_colour += local_colour;
 				}
@@ -665,12 +665,6 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 
 					ret_colour += local_colour;
 				}
-
-				//total += mask.r;
-				//total += mask.g;
-				//total += mask.b;
-
-				//local_colour += rayPayload.subsurface*(rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
 			}
 
 			if(rayPayload.reflector > 0)
@@ -1095,6 +1089,7 @@ void main()
 
 	while(got_light == false)
 		got_light = get_random_light_pos(light_o, light_normal, sss_colour, 5, vec3(0, 0, 0));
+
 
 	// Get position on image plane
 	vec4 origin;
