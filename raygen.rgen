@@ -639,13 +639,19 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 					total += mask.b;
 
 					float x = 1.0 - running_depth/total_depth;
+					x = (x - 0.5) * 5.0 + 0.5; // contrast
 
-					 x = (x - 0.5) * 5.0 + 0.5;
+					float largest_component = sss_colour.r;
 
-					sss_colour = clamp(sss_colour, 0, 1);
+					if(sss_colour.g > largest_component)
+						largest_component = sss_colour.g;
+						
+					if(sss_colour.b > largest_component)
+						largest_component = sss_colour.b;
+
+					sss_colour /= largest_component;
 
 					local_colour += x*rayPayload.subsurface*(sss_colour.r*mask.r + sss_colour.g*mask.g + sss_colour.b*mask.b)*(last_colour.r*mask.r + last_colour.g*mask.g + last_colour.b*mask.b);
-
 				
 					ret_colour += local_colour;
 				}
@@ -1084,6 +1090,13 @@ void main()
 	// Only seed once per pixel
 	prng_state = gl_LaunchIDEXT.y*gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x;
 
+	// For subsurface scattering later on
+	got_light = false;
+
+	while(got_light == false)
+		got_light = get_random_light_pos(light_o, light_normal, sss_colour, 5, vec3(0, 0, 0));
+
+	// Get position on image plane
 	vec4 origin;
 	vec4 direction;
 
@@ -1094,12 +1107,6 @@ void main()
 		gl_LaunchIDEXT.y,
 		gl_LaunchSizeEXT.x,
 		gl_LaunchSizeEXT.y);
-
-
-	// For subsurface scattering later on
-	while(got_light == false)
-		got_light = get_random_light_pos(light_o, light_normal, sss_colour, 5, vec3(0, 0, 0));
-
 
 	// Do chromatic aberration (good for making rainbows via prisms)
 	const int channels = 3;
@@ -1131,11 +1138,6 @@ void main()
 		total += mask;
 		color += f*mask;
 	}
-
-	
-
-	
-
 
 	// Do pseudorandom depth of field (DOF) rays
 	const float focal_distance = 6.0;
