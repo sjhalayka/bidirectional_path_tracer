@@ -609,6 +609,8 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 		
 					vec3 last_trace_position = trace_position;
 
+					vec3 last_colour = vec3(0, 0, 0);
+
 					while(true)
 					{
 						traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, trace_position, tmin, light_dir, tmax, 0);
@@ -616,6 +618,8 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 						// Hit the sky
 						if(rayPayload.dist == -1.0)
 							break;
+
+
 
 						last_trace_position = trace_position;
 						trace_position += light_dir*rayPayload.dist;
@@ -629,6 +633,10 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 						|| rayPayload.color.b > 1)
 						{
 							break;
+						}
+						else
+						{
+							last_colour = rayPayload.color;
 						}
 					}
 
@@ -644,7 +652,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 
 					sss_colour = clamp(sss_colour, 0, 1);
 
-					local_colour += x*rayPayload.subsurface*(sss_colour.r*mask.r + sss_colour.g*mask.g + sss_colour.b*mask.b);
+					local_colour += x*rayPayload.subsurface*(sss_colour.r*mask.r + sss_colour.g*mask.g + sss_colour.b*mask.b)*(last_colour.r*mask.r + last_colour.g*mask.g + last_colour.b*mask.b);
 
 				
 					ret_colour += local_colour;
