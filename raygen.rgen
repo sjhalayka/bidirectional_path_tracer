@@ -588,9 +588,7 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 			{
 				vec3 o_subsurface = hitPos - rayPayload.normal * 0.005 + RandomUnitVector(prng_state)*0.001;
 				
-
-
-				if(got_light)
+				if(got_light) // this should be set to true in main()
 				{
 					RayPayload r = rayPayload;
 
@@ -600,8 +598,6 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 					float running_depth = 0;
 		
 					vec3 last_trace_position = trace_position;
-
-					vec3 last_colour = vec3(0, 0, 0);
 
 					while(true)
 					{
@@ -624,10 +620,6 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 						{
 							break;
 						}
-						else
-						{
-							last_colour = rayPayload.color;
-						}
 					}
 
 					rayPayload = r;
@@ -639,21 +631,8 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 					float x = 1.0 - running_depth/total_depth;
 					x = (x - 0.5) * 5.0 + 0.5; // contrast
 
-					sss_colour = vec3(10.0, 5, 0);
-
-					float largest_component = sss_colour.r;
-
-					if(sss_colour.g > largest_component)
-						largest_component = sss_colour.g;
-						
-					if(sss_colour.b > largest_component)
-						largest_component = sss_colour.b;
-
-					sss_colour /= largest_component;
-
 					local_colour += x*rayPayload.subsurface;
-					//local_colour += (sss_colour.r*mask.r + sss_colour.g*mask.g + sss_colour.b*mask.b) *(last_colour.r*mask.r + last_colour.g*mask.g + last_colour.b*mask.b);
-				
+					
 					ret_colour += local_colour;
 				}
 				else
