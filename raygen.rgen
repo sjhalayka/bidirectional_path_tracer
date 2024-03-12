@@ -34,20 +34,13 @@ struct ray
 
 	int child_refract_id;
 	int child_reflect_id;
-	int child_subsurface_id;
 	int parent_id;
 
 	float base_color;
 	float accumulated_color;
-	//float base_opacity;
-
-	float sss_base_opacity;
-	float sss_base_colour;
 
 	float reflection_constant;
 	float refraction_constant;
-	float sss_constant;
-	float sss_density;
 
 	float tint_constant;
 	vec3 tint_colour;
@@ -132,7 +125,6 @@ vec3 hsv2rgb(vec3 c)
 void get_fog2(
 	const vec3 start_location,
 	const vec3 end_location,
-	const vec3 direction,
 	inout float dist_color, 
 	inout float dist_opacity,
 	const float hue,
@@ -159,7 +151,7 @@ void get_fog2(
 
 		for(int j = 0; j < num_steps; j++, curr_step += step)
 		{
-			float colour = get_omni_radiance_backward(10, 5, curr_step, hue, eta);
+			float colour = 1;//get_omni_radiance_backward(10, 5, curr_step, hue, eta);
 
 			const float trans = 1.0 - clamp(dist_opacity, 0.0, 1.0);
 			dist_color += colour*trans;
@@ -599,8 +591,16 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 		
 					vec3 last_trace_position = trace_position;
 
+
+
+					//float global_fog_colour = 0;
+					//float global_fog_opacity = 0;
+
 					while(true)
 					{
+						//float local_fog_colour = 0;
+						//float local_fog_opacity = 0;
+
 						traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, trace_position, tmin, light_dir, tmax, 0);
 
 						// Hit the sky
@@ -611,7 +611,23 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 						trace_position += light_dir*rayPayload.dist;
 
 						if(dot(light_dir, rayPayload.normal) >= 0.0)
+						{
 							running_depth += distance(trace_position, last_trace_position);
+							
+							/*
+							get_fog2(
+							trace_position,
+							last_trace_position,
+							local_fog_colour, 
+							local_fog_opacity,
+							hue,
+							eta,
+							rayPayload.color);
+
+							global_fog_colour += local_fog_colour;
+							global_fog_opacity += local_fog_opacity;
+							*/
+						}
 
 						// Hit the light
 						if(rayPayload.color.r > 1
@@ -630,9 +646,10 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 
 					float x = 1.0 - running_depth/total_depth;
 					x = (x - 0.5) * 5.0 + 0.5; // contrast
-
 					local_colour += x*rayPayload.subsurface;
 					
+					//local_colour += rayPayload.subsurface*global_fog_colour;
+
 					ret_colour += local_colour;
 				}
 				else
@@ -812,7 +829,6 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 		rays[i].in_use = false;
 		rays[i].child_reflect_id = -1;
 		rays[i].child_refract_id = -1;
-		rays[i].child_subsurface_id = -1;
 		rays[i].parent_id = -1;
 		rays[i].external_reflection_ray = false;
 		rays[i].external_refraction_ray = false;
@@ -821,8 +837,6 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 		rays[i].depth = 0;
 		rays[i].tint_constant = 0;
 		rays[i].tint_colour = vec3(0, 0, 0);
-		rays[i].sss_base_opacity = 0;
-		rays[i].sss_base_colour = 0;
 	}
 
 
@@ -882,8 +896,7 @@ float get_ray0(vec4 origin, vec4 direction, const float hue, const float eta)
 				rays[i].normal = rayPayload.normal;				
 				rays[i].reflection_constant = rayPayload.reflector;
 				rays[i].refraction_constant = rayPayload.opacity;
-				rays[i].sss_constant = rayPayload.subsurface;
-				rays[i].sss_density = rayPayload.density;
+
 
 			
 				// Do some fog in an AABB
