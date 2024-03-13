@@ -1,4 +1,10 @@
-Cornell box done in glTF format, with caustics.
+Cornell box done in glTF format, including such features as:
+
+- Reflection and refraction
+- Chromatic aberration
+- Reflection and refraction caustics
+- Subsurface scattering of light by opaque objects
+- Fog
 
 This software is under heavy construction!
 
