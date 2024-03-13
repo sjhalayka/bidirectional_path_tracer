@@ -1,4 +1,4 @@
-Path tracer, including such features as:
+Vulkan/GLSL path tracer, including such features as:
 
 - Reflection and refraction
 - Chromatic aberration
