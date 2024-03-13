@@ -1,4 +1,4 @@
-Cornell box done in glTF format, including such features as:
+Path tracer, including such features as:
 
 - Reflection and refraction
 - Chromatic aberration
