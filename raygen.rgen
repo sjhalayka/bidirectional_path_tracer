@@ -153,14 +153,16 @@ void get_fog2(
 			float colour = 1;//get_omni_radiance_backward(10, 5, curr_step, hue, eta);
 
 			const float trans = 1.0 - clamp(dist_opacity, 0.0, 1.0);
-			dist_color += colour*trans;
-			dist_opacity += 0.1*trans;
+			dist_color += 0.001;//2*colour*trans;
+			dist_opacity = 1;//+= 0.001;//*trans;
 		}
 	}
 
 	dist_color *= (colour.r*mask.r + colour.g*mask.g + colour.b*mask.b);
 
-	//dist_color = 1 - dist_color;
+	dist_opacity = clamp(dist_opacity, 0, 1);
+
+	dist_color = 1 - clamp(dist_color, 0, 1);
 }
 
 
@@ -536,126 +538,129 @@ bool is_clear_line_of_sight(vec3 pos_start, const vec3 pos_end)
 }
 
 
-float trace_path_forward2(const vec3 eye, const vec3 direction, const float hue, const float eta)
+
+
+
+
+
+
+
+// https://computergraphics.stackexchange.com/questions/13962/forward-path-tracing-versus-backward-path-tracing-how-may-i-achieve-realistic-s
+float trace_path_forward(const vec3 eye, const vec3 direction, const float hue, const float eta)
 {
-	const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
+    const vec3 mask = hsv2rgb(vec3(hue, 1.0, 1.0));
 
-	// light_o is assigned a value in main()
+    const vec3 light_d = RandomUnitVector(prng_state);
 
-	const vec3 light_d = RandomUnitVector(prng_state);
+    const float energy = 1.0;
 
-	const float energy = 0.1;
+    int step_count = 0;
+    vec3 step_locations[max_bounces + 2];
+    vec3 step_directions[max_bounces + 2];
 
-	int step_count = 0;
-	vec3 step_locations[max_bounces + 3];
-	vec3 step_directions[max_bounces + 3];
+    step_locations[step_count] = light_o;
+    step_directions[step_count] = light_d;
+    step_count++;
 
-	traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, eye, 0.001, direction, 10000.0, 0);
+    if(false == is_clear_line_of_sight(eye, light_o))
+    {   
+        vec3 o = light_o;
+        vec3 d = light_d;
 
-	if(rayPayload.dist == -1)
-		return 0.0;
+        for(int i = 0; i < max_bounces; i++)
+        {
+            traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, 0.001, d, 10000.0, 0);
 
-	const vec3 first_hit_pos = eye + direction * rayPayload.dist;
+            if(rayPayload.dist == -1)
+                return 0.0;
 
-	step_locations[step_count] = light_o;
-	step_directions[step_count] = light_d;
-	step_count++;
+            const vec3 hitPos = o + d * rayPayload.dist;
 
-	if(false == is_clear_line_of_sight(first_hit_pos, light_o))
-	{	
-		vec3 o = light_o;
-		vec3 d = light_d;
+            o = hitPos + rayPayload.normal * 0.01;
+            d = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
+            
+            step_locations[step_count] = o;
+            step_directions[step_count] = d;
+            step_count++;
 
-		for(int i = 0; i < max_bounces; i++)
-		{
-			traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, o, 0.001, d, 10000.0, 0);
+            if(true == is_clear_line_of_sight(eye, step_locations[step_count - 1]))
+                break;
+        }
+    }
 
-			if(rayPayload.dist == -1)
-				return 0.0;
+    step_locations[step_count] = eye;
+    step_directions[step_count] = direction;
+    step_count++;
 
-			const vec3 hitPos = o + d * rayPayload.dist;
+    
 
-			o = hitPos + rayPayload.normal * 0.01;
-			d = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
-			
-			step_locations[step_count] = o;
-			step_directions[step_count] = d;
-			step_count++;
+    // Reverse the path
+    uint start = 0;
+    uint end = step_count - 1;
 
-			if(true == is_clear_line_of_sight(first_hit_pos, step_locations[step_count - 1]))
-				break;
-		}
-	}
+    while(start < end) 
+    { 
+        vec3 temp = step_locations[start];  
+        step_locations[start] = step_locations[end]; 
+        step_locations[end] = temp; 
 
+        temp = step_directions[start];  
+        step_directions[start] = step_directions[end]; 
+        step_directions[end] = temp; 
 
+        start++;
+        end--; 
+    }
 
-
-	step_locations[step_count] = first_hit_pos;
-	step_directions[step_count] = light_d;
-	step_count++;
-
-	step_locations[step_count] = eye;
-	step_directions[step_count] = direction;
-	step_count++;
-
-
-
-
-
-
-	// Reverse the path
-	uint start = 0;
-	uint end = step_count - 1;
-
-	while(start < end) 
-	{ 
-		vec3 temp = step_locations[start];  
-		step_locations[start] = step_locations[end]; 
-		step_locations[end] = temp; 
-
-		temp = step_directions[start];
-		step_directions[start] = step_directions[end]; 
-		step_directions[end] = temp; 
-
-		start++;
-		end--; 
-	}
-
-	
-	for(int i = 1; i < step_count - 1; i++)
-	{
-		step_directions[i] = (step_locations[i + 1] - step_locations[i]);
-	}
-	
+    
+    for(int i = 1; i < step_count - 1; i++)
+    {
+        //step_directions[i] = (step_locations[i + 1] - step_locations[i]);
+    }
+    
 
 
 
-	float ret_colour = 0;
-	float local_colour = energy;
-	float total = 0;
+    float ret_colour = 0;
+    float local_colour = energy;
+    float total = 0;
 
-	for(int i = 0; i < step_count - 1; i++)
-	{
-		vec3 step_o = step_locations[i];
-		vec3 step_d = step_directions[i];
+    for(int i = 0; i < step_count - 1; i++)
+    {
+        vec3 step_o = step_locations[i];
+        vec3 step_d = step_directions[i];
 
-		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, step_o, 0.001, step_d, 10000.0, 0);
 
-		local_colour *= (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
 
-		total += mask.r;
-		total += mask.g;
-		total += mask.b;
+        traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, step_o, 0.001, step_d, 10000.0, 0);
 
-		if(i == step_count - 2 || (rayPayload.color.r > 1.0 || rayPayload.color.g > 1.0 || rayPayload.color.b > 1.0))
-		{
-			ret_colour += local_colour;
-			break;
-		}
-	}
+        local_colour *= (rayPayload.color.r*mask.r + rayPayload.color.g*mask.g + rayPayload.color.b*mask.b);
 
-	return ret_colour / total;
+        total += mask.r;
+        total += mask.g;
+        total += mask.b;
+
+        if(i == step_count - 2 || (rayPayload.color.r > 1.0 || rayPayload.color.g > 1.0 || rayPayload.color.b > 1.0))
+        {
+            ret_colour += local_colour;
+            break;
+        }
+    }
+
+    return ret_colour / total;
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 float get_radiance_forward(const int samples, const vec3 origin, const vec3 direction, const float hue, const float eta)
@@ -665,7 +670,7 @@ float get_radiance_forward(const int samples, const vec3 origin, const vec3 dire
 	float ret_colour = 0.0;
 
 	for(int s = 0; s < samples; s++)
-		ret_colour += trace_path_forward2(origin, direction, hue, eta);
+		ret_colour += trace_path_forward(origin, direction, hue, eta);
 
 	rayPayload = r;
 
@@ -761,13 +766,13 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 
 
 
-					//float global_fog_colour = 0;
-					//float global_fog_opacity = 0;
+					float global_fog_colour = 0;
+					float global_fog_opacity = 0;
 
 					while(true)
 					{
-						//float local_fog_colour = 0;
-						//float local_fog_opacity = 0;
+						float local_fog_colour = 0;
+						float local_fog_opacity = 0;
 
 						traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, trace_position, tmin, light_dir, tmax, 0);
 
@@ -816,7 +821,8 @@ float trace_path_backward(const int steps, const vec3 origin, const vec3 directi
 					x = (x - 0.5) * 5.0 + 0.5; // contrast
 					local_colour += x*rayPayload.subsurface;
 					
-					//local_colour += rayPayload.subsurface*global_fog_colour;
+					//global_fog_colour = (global_fog_colour - 0.5) * 2.0 + 0.5;
+					//local_colour += rayPayload.subsurface*global_fog_colour*global_fog_opacity;
 
 					ret_colour += local_colour;
 				}
