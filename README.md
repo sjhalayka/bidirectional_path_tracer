@@ -5,6 +5,7 @@ Vulkan/GLSL path tracer, including such features as:
 - Reflection and refraction caustics
 - Subsurface scattering of light by opaque objects
 - Fog
+- Depth of field
 
 This software is under heavy construction!
 
