@@ -22,7 +22,7 @@ Based off of Sascha Willems' raytracingreflections code.
 
 Cornell box by Rob Rau.
 
-![image](https://github.com/sjhalayka/bidirectional_path_tracer/assets/16404554/522482ce-2132-458f-b7d8-46190c5690cb)
+![image](https://github.com/sjhalayka/bidirectional_path_tracer/assets/16404554/be067695-c673-4de1-a50d-a4df1cacce70)
 
 ![image](https://github.com/sjhalayka/bidirectional_path_tracer/assets/16404554/8bd1ed4f-ee14-401e-a788-feaffaf5bb2f)
 
