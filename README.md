@@ -1,4 +1,4 @@
-Vulkan/GLSL path tracer, including such features as:
+Vulkan/GLSL/C++ path tracer, including such features as:
 
 - Reflection and refraction
 - Chromatic aberration
@@ -7,6 +7,7 @@ Vulkan/GLSL path tracer, including such features as:
 - Fog
 - Depth of field
 - High resolution screenshots
+- Denoising via Intel Open Image Denoise library
 
 This software is under heavy construction!
 
