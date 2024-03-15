@@ -1,7 +1,7 @@
 Vulkan/GLSL/C++ path tracer, including such features as:
 
 - Reflection and refraction
-- Chromatic aberration
+- Chromatic aberration, with a variable number of colour channels
 - Reflection and refraction caustics
 - Subsurface scattering of light by opaque objects
 - Fog
