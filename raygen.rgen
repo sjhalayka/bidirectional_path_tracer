@@ -409,7 +409,7 @@ void get_fog(inout float dist_color, inout float dist_opacity, vec3 origin, vec3
 
 			const float trans = 1.0 - clamp(dist_opacity, 0.0, 1.0);
 			dist_color += colour*trans;
-			dist_opacity += 0.01*colour*trans;
+			dist_opacity += 0.1*colour*trans;
 		}
 	}
 
@@ -490,6 +490,7 @@ bool get_random_light_pos(inout vec3 final_pos, inout vec3 final_normal, inout v
 		}
 
 		o = hitPos;// + rayPayload.normal * 0.01;
+		//d = cosWeightedRandomHemisphereDirection(rayPayload.normal, prng_state);
 	}
 
 	final_pos = final_normal = final_colour = vec3(0, 0, 0);
@@ -1235,9 +1236,13 @@ void main()
 	// For subsurface scattering later on
 	got_light = false;
 
-	while(got_light == false)
-		got_light = get_random_light_pos(light_o, light_normal, sss_colour, 5, vec3(0, 0, 0));
+	int count = 0;
 
+	while(count < 100 && got_light == false)
+	{
+		got_light = get_random_light_pos(light_o, light_normal, sss_colour, 25, vec3(0, 0, 0));
+		count++;
+	}
 
 	// Get position on image plane
 	vec4 origin;
@@ -1252,13 +1257,13 @@ void main()
 		gl_LaunchSizeEXT.y);
 
 	// Do chromatic aberration (good for making rainbows via prisms)
-	const int channels = 3;
+	const int channels = 7;
 	
-	const float max_hue = rgb2hsv(vec3(0.0, 0.0, 1.0)).x; // blue
+	const float max_hue = rgb2hsv(vec3(1.0, 0.0, 1.0)).x; // violet
 	const float min_hue = rgb2hsv(vec3(1.0, 0.0, 0.0)).x; // red
 
-	const float max_eta = 0.75;
-	const float min_eta = 0.75;
+	const float max_eta = 0.95;
+	const float min_eta = 0.65;
 
 	const float hue_diff = max_hue - min_hue;
 	const float hue_step_size = hue_diff / (channels - 1);

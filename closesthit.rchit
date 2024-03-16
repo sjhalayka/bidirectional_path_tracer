@@ -112,15 +112,15 @@ void main()
 	// Make the transparent sphere reflective
 	if(rayPayload.opacity == 0.0)
 	{
-		rayPayload.opacity = 1.0;
-		rayPayload.reflector = 0.0;
+		rayPayload.opacity = 0.0;
+		rayPayload.reflector = 1.0;
 
-		rayPayload.color = vec3(1.0, 1.0, 1.0);
+		//rayPayload.color = vec3(1.0, 1.0, 1.0);
 
 		//rayPayload.tint = 1.0;
 		//rayPayload.tint_colour = rayPayload.color;
 
-		rayPayload.subsurface = 1.0;
+		rayPayload.subsurface = 0.0;
 	}
 
 
@@ -135,9 +135,9 @@ void main()
 	//	rayPayload.color.g = 0.5;
 	//	rayPayload.color.b = 0.0;
 	
-		rayPayload.opacity = 0.9;
+		rayPayload.opacity = 1.0;
 		rayPayload.color = vec3(1,1,1);
-		rayPayload.reflector = 0.99;
+//		rayPayload.reflector = 1.0;
 
 		//rayPayload.tint = 1.0;
 		//rayPayload.tint_colour = vec3(1, 0.5, 0.0);
@@ -160,8 +160,8 @@ void main()
 	float light_scale = 255.0*texture(normalSampler, uv).r;
 	light_scale = clamp(light_scale, 0.0, 127.0);
 	
-//	if(light_scale > 0)
-//	light_scale = 9; // for debuggin purposes
+	if(light_scale > 0)
+	light_scale = 5; // for debuggin purposes
 	
 	rayPayload.color *= pow(2.0, light_scale);
 }

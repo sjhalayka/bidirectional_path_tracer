@@ -65,16 +65,16 @@ public:
 	{
 		switch (keyCode)
 		{
-		case KEY_SPACE:
-		{
-			paused = true;
-			taking_screenshot = true;
-			screenshot(4, "v_rt_reflect.png");
-			taking_screenshot = false;
-			paused = false;
+			case KEY_SPACE:
+			{
+				paused = true;
+				taking_screenshot = true;
+				screenshot(4, "v_rt_reflect.png");
+				taking_screenshot = false;
+				paused = false;
 
-			break;
-		}
+				break;
+			}
 		}
 	}
 
@@ -911,6 +911,7 @@ public:
 				//"C:/temp/rob_rau_cornell/circle_light/circle_light.gltf",
 				//"C:/temp/rob_rau_cornell/sphere_light/sphere_light.gltf",
 				///"C:/temp/rob_rau_cornell/simple_building/simple_building.gltf",
+				//"C:/temp/rob_rau_cornell/bunny2/bunny2_nobox.gltf",
 				//"C:/temp/rob_rau_cornell/bunny2/bunny2.gltf",
 				//"C:/temp/rob_rau_cornell/bunny2/bunny_array.gltf",
 				//"C:/temp/rob_rau_cornell/prism3/cornell_prism3.gltf",
