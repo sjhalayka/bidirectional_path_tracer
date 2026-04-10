@@ -31,7 +31,7 @@ To obtain and compile the demo code:
 
 Obtain the files
 
-1) Download the base code from: https://github.com/SaschaWillems/Vulkan
+1) Download the base code from: [https://github.com/SaschaWillems/Vulkan](https://github.com/SaschaWillems/Vulkan/tree/94198a7548d0c5b899840c31c67190df919a61a0)
 
 2) Extract Vulkan-master directory to your hard drive (e.g. C:/dev/Vulkan-master/)
 
